@@ -28,7 +28,7 @@ SET(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 SET(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 
 SET(libs roslib roscpp rosbag glog gflags amrl-shared-lib boost_system lua5.1
-    pthread)
+    pthread ${PROJECT_SOURCE_DIR}/third-party/KDTree/build/lib/libKDTree.so)
 
 ADD_LIBRARY(shared_library
             src/visualization/visualization.cc
@@ -37,6 +37,7 @@ ADD_LIBRARY(shared_library
 ADD_SUBDIRECTORY(src/shared)
 INCLUDE_DIRECTORIES(src/shared)
 INCLUDE_DIRECTORIES(src)
+INCLUDE_DIRECTORIES(third-party)
 
 ROSBUILD_ADD_EXECUTABLE(slam
                         src/slam/slam_main.cc

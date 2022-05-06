@@ -5,7 +5,8 @@
 #include "eigen3/Eigen/Geometry"
 #include "vector_map/vector_map.h"
 #include "amrl_msgs/VisualizationMsg.h"
-
+#include "KDTree/KDTree.hpp"
+#include "util/random.h"
 #include <memory>
 #include <vector>
 
@@ -18,11 +19,14 @@ namespace rrt_planner {
 struct State {
   Vector2f loc;
   float angle;
+  State() {}
+  State(const Vector2f& loc, const float angle) 
+    : loc(loc), angle(angle) {}
 };
 
 struct Control {
-  float velocity;
-  float curvature;
+  float a;
+  float c;
 };
 
 struct Trajectory {
@@ -32,12 +36,14 @@ struct Trajectory {
 };
 
 struct TreeNode {
-  TreeNode* parent;
+  shared_ptr<TreeNode> parent;
   float cost;
-  vector<TreeNode*> children;
+  Vector2f location;
+  vector<shared_ptr<TreeNode>> children;
   TreeNode() {}
-  TreeNode(TreeNode* parent, float cost) 
-    : parent(parent), cost(cost) {}
+  TreeNode(const TreeNode& parent, float cost) {
+    this->parent = make_shared<TreeNode>(parent);
+  }
 };
 
 class RRTPlanner {
@@ -56,9 +62,27 @@ private:
   Vector2f global_goal_mloc_;
 	float global_goal_mangle_;
   bool global_goal_set_;
+  TreeNode root_;
 
-  TreeNode* root_;
-  void Steer(const State& start_state, const State goal_state);
+  const float t_interval_ = 0.5;
+  const float kEpsilon = 1e-4;
+
+  const float MAX_VELOCITY = 1.0;
+  const float MIN_CURVATURE = -1.7;
+  const float MAX_CURVATURE = 1.7;
+  const float SAFE_MARGIN = 0.1;
+  const float CAR_LENGTH = 0.4826;
+  const float CAR_LENGTH_SAFE = CAR_LENGTH + SAFE_MARGIN * 2;
+  const float CAR_BASE = 0.343;
+  const float CAR_WIDTH = 0.2667;
+  const float CAR_WIDTH_SAFE = CAR_WIDTH + SAFE_MARGIN * 2;
+
+  Trajectory Steer_(const State& start_state, 
+                    const State& goal_state,
+                    State& next_state);
+  void SteerOneStep_(const State& curr_state, State& next_state);
+  State GetNextStateByCurvature(const State& curr_state, const float curvature);
+  float GetCost_(const Control& u);
 };
 
 }

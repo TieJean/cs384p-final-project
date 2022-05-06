@@ -1,0 +1,3 @@
+[submodule "third-party/KDTree"]
+	path = third-party/KDTree
+	url = https://github.com/crvs/KDTree.git
