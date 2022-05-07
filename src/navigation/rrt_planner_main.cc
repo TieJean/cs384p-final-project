@@ -8,14 +8,19 @@ int main() {
   RRTPlanner planner;
   planner.SetMap("maps/GDC1.txt");
   planner.SetGlobalGoal(Vector2f(-32, 20), 0.0);
-  State start_state(Vector2f(-32, 18), M_PI_2);
+  State start_state(Vector2f(-32, 20), 0.0);
   State goal_state(Vector2f(-30, 20), 0.0);
 
-  Control control;
-  control.a = 0;
-  control.c = -1.0;
+  Control next_control;
+  next_control.a = 0;
+  next_control.c = -1.0;
   State next_state;
-  planner.SteerOneStepByControl_(start_state, control, next_state);
-  cout << next_state << endl;
+  if (planner.SteerOneStep_(start_state, goal_state, next_state, next_control)) {
+    cout << next_state << endl;
+    cout << "next_control.c: " << next_control.c << endl;
+  } else {
+    cout << "cannot steer one step" << endl;
+  }
+  
 
 }

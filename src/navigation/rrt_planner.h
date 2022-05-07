@@ -75,6 +75,7 @@ public:
                               State& next_state);
   State GetNextStateByCurvature_(const State& curr_state, const float curvature);
   tuple<Vector2f, float, float, float, int> getTravelledArc_(const State& baselink_state, const float curvature);
+  tuple<Vector2f, float, float, float, int> getTravelledArcRobotAngle_(const State& baselink_state, const float curvature);
 
 private:
   vector_map::VectorMap map_;

@@ -109,6 +109,21 @@ RRTPlanner::getTravelledArc_(const State& baselink_state, const float curvature)
   return std::make_tuple(a_center, a_radius, a_angle_start, a_angle_end, rotation_sign);
 }
 
+tuple<Vector2f, float, float, float, int>
+RRTPlanner::getTravelledArcRobotAngle_(const State& baselink_state, const float curvature) {
+  float dist_traveled = GetTravelledDistOneStep_();
+
+  auto center_and_r_c = getTurningCenterAndRadiusByCurvature(baselink_state, curvature);
+  Vector2f a_center = std::get<0>(center_and_r_c);
+  float r_c = std::get<1>(center_and_r_c);
+  float a_radius = abs(r_c);
+  float a_delta = dist_traveled / r_c; // positive if counterclock-wise
+  float a_angle_start = baselink_state.angle;
+  float a_angle_end = baselink_state.angle + a_delta;
+  int rotation_sign = r_c > 0 ? 1 : -1;
+  return std::make_tuple(a_center, a_radius, a_angle_start, a_angle_end, rotation_sign);
+}
+
 // For non-zero curvature, this function assume abs(theta) < M_PI
 State RRTPlanner::GetNextStateByCurvature_(const State& curr_state, const float curvature) {
   Vector2f next_loc;
@@ -161,19 +176,21 @@ bool RRTPlanner::SteerOneStepByControl_(const State& curr_state, const Control& 
     float a_radius      = std::get<1>(arc_travelled);
     float a_angle_start = std::get<2>(arc_travelled);
     float a_angle_end   = std::get<3>(arc_travelled);
-    int rotation_sign   = std::get<4>(arc_travelled);
+    // int rotation_sign   = std::get<4>(arc_travelled);
     // cout << "curr_state: " << curr_state << endl;
     for (line2f map_line : map_.lines) {
-      distance = MinDistanceLineArc(map_line.p0, map_line.p1, a_center, a_radius, a_angle_start, a_angle_end, rotation_sign);
-      // if (map_line.p0.x() > -36 && map_line.p0.x() < -30 && map_line.p0.y() > 18 && map_line.p0.y() < 19) {
-      //   cout << "p0: " << map_line.p0.transpose() << ", p1: " << map_line.p1.transpose() << endl;
-      //   cout << "distance: " << distance << ", CONFIG_RRT_CLEARANCE: " << CONFIG_RRT_CLEARANCE << endl;
-      //   cout << "a_center: " << a_center.transpose() << ", a_radius: " << a_radius 
-      //        << ", a_angle_start: " << a_angle_start << ", a_angle_end: " << a_angle_end << ", rotation_sign: " << rotation_sign << endl;
-      //   cout << endl;
-      // }
-      if (distance < CONFIG_RRT_CLEARANCE) { 
-        cout << "p0: " << map_line.p0.transpose() << ", p1: " << map_line.p1.transpose() << endl;
+      // distance = MinDistanceLineArc(map_line.p0, map_line.p1, a_center, a_radius, a_angle_start, a_angle_end, rotation_sign);
+      if (c > 0) {
+        distance = MinDistanceLineArc(map_line.p0, map_line.p1, a_center, a_radius, a_angle_start, a_angle_end, (int)1);
+      } else {
+        distance = MinDistanceLineArc(map_line.p0, map_line.p1, a_center, a_radius, a_angle_start, a_angle_end, (int)1);
+        // distance = MinDistanceLineArc(map_line.p0, map_line.p1, a_center, a_radius, (float)(0.0), (float)(0.175), 1);
+      }
+      if (distance < kEpsilon) { 
+        // cout << "distance: " << distance << ", curvature: " << control.c << endl;
+        // cout << "p0: " << map_line.p0.transpose() << ", p1: " << map_line.p1.transpose() << endl;
+        // cout << "a_center: " << a_center.transpose() << ", a_radius: " << a_radius 
+        //      << ", a_angle_start: " << a_angle_start << ", a_angle_end: " << a_angle_end << endl;
         break; 
       }
     }
@@ -206,6 +223,8 @@ bool RRTPlanner::SteerOneStep_(const State& start_state,
       foundCollisionFreeCurvature = true;
       float dist_to_goal_state = distBtwStates(start_state, next_state_by_curvature);
       if (dist_to_goal_state < best_dist) {
+        cout << "dist_to_goal_state: " << dist_to_goal_state 
+             << ", best_dist: " << best_dist << ", c: " << control.c << endl;
         next_state = next_state_by_curvature;
         control_to_next_state =  control;
         best_dist = dist_to_goal_state;
