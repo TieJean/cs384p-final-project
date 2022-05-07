@@ -22,6 +22,11 @@ struct State {
   State() {}
   State(const Vector2f& loc, const float angle) 
     : loc(loc), angle(angle) {}
+
+  friend std::ostream& operator<<(std::ostream& o, const State& s) {
+    o << "loc: " << s.loc.transpose()  << ", angle: "  << s.angle;
+    return o;
+  }
 };
 
 struct Control {
@@ -56,15 +61,16 @@ public:
   Vector2f GetLocalGoal(const Vector2f& robot_mloc, const float robot_mangle);
   bool AtGoal(const Vector2f& robot_mloc);
   bool AtGoal(const State& state_baselink);
+  void VisualizeTraj(const Trajectory& traj, VisualizationMsg& global_viz_msg);
   void VisualizePath(VisualizationMsg& global_viz_msg);
 
   Trajectory Steer_(const State& start_state, 
                     const State& goal_state,
                     State& next_state);
-  Control SteerOneStep_(const State& start_state, 
-                        const State& goal_state,
-                        State& next_state);
-  void SteerOneStepByControl_(const State& curr_state, 
+  bool SteerOneStep_(const State& start_state, 
+                     const State& goal_state,
+                     State& next_state, Control& control_to_next_state) ;
+  bool SteerOneStepByControl_(const State& curr_state, 
                               const Control& control, 
                               State& next_state);
   State GetNextStateByCurvature_(const State& curr_state, const float curvature);

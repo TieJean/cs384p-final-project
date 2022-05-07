@@ -36,6 +36,7 @@
 #include "config_reader/config_reader.h"
 
 #include "planner.h"
+#include "rrt_planner.h"
 
 using amrl_msgs::AckermannCurvatureDriveMsg;
 using amrl_msgs::VisualizationMsg;
@@ -51,6 +52,7 @@ using std::vector;
 using namespace math_util;
 using namespace ros_helpers;
 using namespace planner;
+using namespace rrt_planner;
 
 namespace
 {
@@ -101,6 +103,8 @@ namespace navigation
     nav_goal_angle_ = angle;
     planner.SetGlobalGoal(loc, angle);
     planner.GetGlobalPlan(robot_loc_, robot_angle_);
+    rrt_planner.SetGlobalGoal(loc, angle);
+    rrt_planner.GetGlobalPlan(robot_loc_, robot_angle_);
   }
 
   void Navigation::UpdateLocation(const Eigen::Vector2f &loc, float angle)
@@ -403,6 +407,21 @@ namespace navigation
 
     drawVisualizations();
     planner.VisualizePath(global_viz_msg_);
+
+    // rrt_planner.SetMap("maps/GDC1.txt");
+    // Trajectory trajectory;
+    // State start_state(Vector2f(-32, 18), M_PI_2);
+    // Control control;
+    // control.a = 0;
+    // control.c = -1.0;
+    // State next_state;
+    // bool flag = rrt_planner.SteerOneStepByControl_(start_state, control, next_state);
+    // cout << "start_state: " << start_state << endl;
+    // if (flag) { cout << "next_state: " << next_state << endl; }
+    // trajectory.control.emplace_back(control);
+    // trajectory.state.emplace_back(start_state);
+    // rrt_planner.VisualizeTraj(trajectory, global_viz_msg_);
+    // cout << endl;
 
     // If odometry has not been initialized, we can't do anything.
     if (!odom_initialized_)

@@ -23,11 +23,13 @@
 
 #include "eigen3/Eigen/Dense"
 #include "planner.h"
+#include "rrt_planner.h"
 
 #ifndef NAVIGATION_H
 #define NAVIGATION_H
 
 using namespace planner;
+using namespace rrt_planner;
 
 namespace ros {
   class NodeHandle;
@@ -139,6 +141,7 @@ class Navigation {
   float nav_goal_angle_;
   // global planner object
   Planner planner;
+  RRTPlanner rrt_planner;
 
   // Current acceleration (acceleration used in previous control cycle to get current velocity)
   float acceleration_;

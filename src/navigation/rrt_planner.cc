@@ -4,6 +4,7 @@
 #include "shared/math/math_util.h"
 #include "shared/util/timer.h"
 #include "shared/ros/ros_helpers.h"
+#include "visualization/visualization.h"
 #include "kd_tree.h"
 #include "rrt_planner.h"
 #include "config_reader/config_reader.h"
@@ -18,6 +19,8 @@ using namespace geometry;
 using geometry::line2f;
 
 namespace rrt_planner {
+
+config_reader::ConfigReader config_reader_({"config/navigation.lua"});
 
 RRTPlanner::RRTPlanner() 
   : global_goal_mloc_(0,0),
@@ -99,9 +102,10 @@ RRTPlanner::getTravelledArc_(const State& baselink_state, const float curvature)
   float r_c = std::get<1>(center_and_r_c);
   float a_radius = abs(r_c);
   float a_delta = dist_traveled / r_c; // positive if counterclock-wise
-  float a_angle_start = baselink_state.angle;
-  float a_angle_end = a_angle_start + a_delta;
-  int rotation_sign = r_c > 0 ? 1 : -1;
+  float a_angle_start = r_c > 0 ? -M_PI_2 + baselink_state.angle : M_PI_2 + baselink_state.angle + a_delta;
+  float a_angle_end = r_c > 0 ? -M_PI_2 + baselink_state.angle + a_delta : baselink_state.angle + M_PI_2;
+  // int rotation_sign = r_c > 0 ? 1 : -1;
+  int rotation_sign = 1; // TODO check for correctness
   return std::make_tuple(a_center, a_radius, a_angle_start, a_angle_end, rotation_sign);
 }
 
@@ -110,7 +114,7 @@ State RRTPlanner::GetNextStateByCurvature_(const State& curr_state, const float 
   Vector2f next_loc;
   float next_angle;
   float dist_traveled = GetTravelledDistOneStep_();
-  if (curvature < kEpsilon) {
+  if (abs(curvature) < kEpsilon) {
     Vector2f curr_loc = curr_state.loc;
     float curr_angle = curr_state.angle;
     next_loc = curr_loc + Rotation2Df(curr_angle) * Vector2f(dist_traveled, 0);
@@ -120,15 +124,17 @@ State RRTPlanner::GetNextStateByCurvature_(const State& curr_state, const float 
     float theta_c = dist_traveled / r_c; // has sign
     float delta_x_in_baselink = sin(theta_c) * r_c;
     float delta_y_in_baselink = -(1 - cos(theta_c)) * r_c;
-    Vector2f next_loc;
     pointInBaselinkToWolrd(curr_state, Vector2f(delta_x_in_baselink, delta_y_in_baselink), next_loc);
     next_angle = curr_state.angle + theta_c;
   }
-  return State(next_loc, next_angle);
+  State next_state;
+  next_state.loc = next_loc;
+  next_state.angle = next_angle;
+  return next_state;
 }
 
 // helper function for Steer
-void RRTPlanner::SteerOneStepByControl_(const State& curr_state, const Control& control, State& next_state) {
+bool RRTPlanner::SteerOneStepByControl_(const State& curr_state, const Control& control, State& next_state) {
   float c = control.c;
   float dist_to_front = CAR_BASE;
   // float dist_to_side = CAR_WIDTH / 2.0;
@@ -138,28 +144,44 @@ void RRTPlanner::SteerOneStepByControl_(const State& curr_state, const Control& 
     
   float distance = 0.0;
   if (abs(c) < kEpsilon) { // if curvature is 0
+  // cout << "case1" << endl;
     Vector2f car_front_p = curr_loc + Rotation2Df(curr_angle) * Vector2f(dist_to_front, 0);
     Vector2f car_end_p   = curr_loc + Rotation2Df(curr_angle) * Vector2f(dist_to_front + dist_traveled, 0);
     for (line2f map_line : map_.lines) {
       distance = MinDistanceLineLine(map_line.p0, map_line.p1, car_front_p, car_end_p);
-      if (distance < CONFIG_RRT_CLEARANCE) { break; }
+      if (distance < CONFIG_RRT_CLEARANCE) { 
+        cout << "p0: " << map_line.p0.transpose() << ", p1: " << map_line.p1.transpose() << endl;
+        break; 
+      }
     }
   } else { // for non-zero curvatures
+    // cout << "case2" << endl;
     auto arc_travelled  = getTravelledArc_(curr_state, c);
     Vector2f a_center   = std::get<0>(arc_travelled);
     float a_radius      = std::get<1>(arc_travelled);
     float a_angle_start = std::get<2>(arc_travelled);
     float a_angle_end   = std::get<3>(arc_travelled);
     int rotation_sign   = std::get<4>(arc_travelled);
+    // cout << "curr_state: " << curr_state << endl;
     for (line2f map_line : map_.lines) {
       distance = MinDistanceLineArc(map_line.p0, map_line.p1, a_center, a_radius, a_angle_start, a_angle_end, rotation_sign);
-      if (distance < CONFIG_RRT_CLEARANCE) { break; }
+      // if (map_line.p0.x() > -36 && map_line.p0.x() < -30 && map_line.p0.y() > 18 && map_line.p0.y() < 19) {
+      //   cout << "p0: " << map_line.p0.transpose() << ", p1: " << map_line.p1.transpose() << endl;
+      //   cout << "distance: " << distance << ", CONFIG_RRT_CLEARANCE: " << CONFIG_RRT_CLEARANCE << endl;
+      //   cout << "a_center: " << a_center.transpose() << ", a_radius: " << a_radius 
+      //        << ", a_angle_start: " << a_angle_start << ", a_angle_end: " << a_angle_end << ", rotation_sign: " << rotation_sign << endl;
+      //   cout << endl;
+      // }
+      if (distance < CONFIG_RRT_CLEARANCE) { 
+        cout << "p0: " << map_line.p0.transpose() << ", p1: " << map_line.p1.transpose() << endl;
+        break; 
+      }
     }
   }
   if (distance >= CONFIG_RRT_CLEARANCE) {
     next_state = GetNextStateByCurvature_(curr_state, c);
   }
-    
+  return distance >= CONFIG_RRT_CLEARANCE;
 }
 
 float distBtwStates(const State& state1, const State& state2) {
@@ -168,27 +190,31 @@ float distBtwStates(const State& state1, const State& state2) {
 
 // greedy, but no optimality guarantee
 // pick curvature that can take robot closest to goal_state
-Control RRTPlanner::SteerOneStep_(const State& start_state, 
+bool RRTPlanner::SteerOneStep_(const State& start_state, 
                                const State& goal_state,
-                               State& next_state) {
+                               State& next_state, Control& control_to_next_state) {
   const float CURVATURE_STEP = 0.05;
   
   float best_dist = std::numeric_limits<float>::max();
-  Control control_to_next_state;
   State next_state_by_curvature;
+  bool foundCollisionFreeCurvature = false;
   for (float c = MIN_CURVATURE; c <= MAX_CURVATURE; c += CURVATURE_STEP) {
     Control control;
     control.c = c;
     control.a = 0; // TODO FIXME
-    SteerOneStepByControl_(start_state, control, next_state_by_curvature);
-    float dist_to_goal_state = distBtwStates(start_state, next_state_by_curvature);
-    if (dist_to_goal_state < best_dist) {
-      next_state = next_state_by_curvature;
-      control_to_next_state =  control;
-      best_dist = dist_to_goal_state;
+    if (SteerOneStepByControl_(start_state, control, next_state_by_curvature)) {
+      foundCollisionFreeCurvature = true;
+      float dist_to_goal_state = distBtwStates(start_state, next_state_by_curvature);
+      if (dist_to_goal_state < best_dist) {
+        next_state = next_state_by_curvature;
+        control_to_next_state =  control;
+        best_dist = dist_to_goal_state;
+      }
+    } else {
+      continue;
     }
   }
-  return control_to_next_state;
+  return foundCollisionFreeCurvature;
 }
 
 /**
@@ -203,13 +229,17 @@ Trajectory RRTPlanner::Steer_(const State& start_state,
   Trajectory traj;
   traj.time = 0;
   State next_state_one_step;
+  Control next_control_one_step;
   for (size_t t = 0; t < MAX_ITER; ++t) {
-    Control control = SteerOneStep_(start_state, goal_state, next_state_one_step);
-    traj.state.emplace_back(next_state_one_step);
-    traj.control.emplace_back(control);
+    if (SteerOneStep_(start_state, goal_state, next_state_one_step, next_control_one_step)) {
+      traj.state.emplace_back(next_state_one_step);
+      traj.control.emplace_back(next_control_one_step);
+    } else {
+      return traj;
+    }
     if (AtGoal(next_state_one_step)) { break; }
   }
-
+  next_state = next_state_one_step;
   return traj;
 }
 
@@ -224,6 +254,20 @@ float RRTPlanner::GetTravelledDistOneStep_() {
 
 void RRTPlanner::VisualizePath(VisualizationMsg& global_viz_msg) {
 
+}
+
+void RRTPlanner::VisualizeTraj(const Trajectory& traj, VisualizationMsg& global_viz_msg) {
+  for (size_t t = 0; t < traj.state.size(); ++t) {
+    auto arc = getTravelledArc_(traj.state[t], traj.control[t].c);
+    Vector2f center   = std::get<0>(arc);
+    float radius      = std::get<1>(arc);
+    float start_angle = std::get<2>(arc);
+    float end_angle   = std::get<3>(arc);
+    // visualization::DrawCross(center, 0.3, 0xFF0000, global_viz_msg);
+    // visualization::DrawCross(traj.state[t].loc, 0.3, 0xFF0000, global_viz_msg);
+    // cout << "center: " << center.transpose() << ", radius: " << radius << ", start_angle: " << start_angle << ", end_angle: " << end_angle << endl;
+    visualization::DrawArc(center, radius, start_angle, end_angle, 0x000000, global_viz_msg);
+  }
 }
 
 
