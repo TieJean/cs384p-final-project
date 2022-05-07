@@ -46,6 +46,10 @@ struct TreeNode {
   }
 };
 
+void pointInBaselinkToWolrd(const State& baselink_state,
+                            const Vector2f& point_in_baselink,
+                            Vector2f& point_in_world);
+
 class RRTPlanner {
 
 public:

@@ -57,6 +57,11 @@ ROSBUILD_ADD_EXECUTABLE(navigation
                         src/navigation/rrt_planner.cc)
 TARGET_LINK_LIBRARIES(navigation shared_library ${libs})
 
+ROSBUILD_ADD_EXECUTABLE(rrt_planner
+                        src/navigation/rrt_planner_main.cc
+                        src/navigation/rrt_planner.cc)
+TARGET_LINK_LIBRARIES(rrt_planner shared_library ${libs})
+
 ADD_EXECUTABLE(eigen_tutorial
                src/eigen_tutorial.cc)
 
