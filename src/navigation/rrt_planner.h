@@ -55,6 +55,7 @@ public:
   void GetGlobalPlan(const Vector2f& odom_loc, const float odom_angle);
   Vector2f GetLocalGoal(const Vector2f& robot_mloc, const float robot_mangle);
   bool AtGoal(const Vector2f& robot_mloc);
+  bool AtGoal(const State& state_baselink);
   void VisualizePath(VisualizationMsg& global_viz_msg);
 
 private:
@@ -80,8 +81,15 @@ private:
   Trajectory Steer_(const State& start_state, 
                     const State& goal_state,
                     State& next_state);
-  void SteerOneStep_(const State& curr_state, State& next_state);
-  State GetNextStateByCurvature(const State& curr_state, const float curvature);
+  Control SteerOneStep_(const State& start_state, 
+                        const State& goal_state,
+                        State& next_state);
+  void SteerOneStepByControl_(const State& curr_state, 
+                              const Control& control, 
+                              State& next_state);
+  State GetNextStateByCurvature_(const State& curr_state, const float curvature);
+  tuple<Vector2f, float, float, float, int> getTravelledArc_(const State& baselink_state, const float curvature);
+  float GetTravelledDistOneStep_();
   float GetCost_(const Control& u);
 };
 
