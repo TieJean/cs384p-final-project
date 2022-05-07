@@ -46,10 +46,6 @@ struct TreeNode {
   }
 };
 
-void pointInBaselinkToWolrd(const State& baselink_state,
-                            const Vector2f& point_in_baselink,
-                            Vector2f& point_in_world);
-
 class RRTPlanner {
 
 public:
@@ -61,6 +57,18 @@ public:
   bool AtGoal(const Vector2f& robot_mloc);
   bool AtGoal(const State& state_baselink);
   void VisualizePath(VisualizationMsg& global_viz_msg);
+
+  Trajectory Steer_(const State& start_state, 
+                    const State& goal_state,
+                    State& next_state);
+  Control SteerOneStep_(const State& start_state, 
+                        const State& goal_state,
+                        State& next_state);
+  void SteerOneStepByControl_(const State& curr_state, 
+                              const Control& control, 
+                              State& next_state);
+  State GetNextStateByCurvature_(const State& curr_state, const float curvature);
+  tuple<Vector2f, float, float, float, int> getTravelledArc_(const State& baselink_state, const float curvature);
 
 private:
   vector_map::VectorMap map_;
@@ -82,17 +90,17 @@ private:
   const float CAR_WIDTH = 0.2667;
   const float CAR_WIDTH_SAFE = CAR_WIDTH + SAFE_MARGIN * 2;
 
-  Trajectory Steer_(const State& start_state, 
-                    const State& goal_state,
-                    State& next_state);
-  Control SteerOneStep_(const State& start_state, 
-                        const State& goal_state,
-                        State& next_state);
-  void SteerOneStepByControl_(const State& curr_state, 
-                              const Control& control, 
-                              State& next_state);
-  State GetNextStateByCurvature_(const State& curr_state, const float curvature);
-  tuple<Vector2f, float, float, float, int> getTravelledArc_(const State& baselink_state, const float curvature);
+  // Trajectory Steer_(const State& start_state, 
+  //                   const State& goal_state,
+  //                   State& next_state);
+  // Control SteerOneStep_(const State& start_state, 
+  //                       const State& goal_state,
+  //                       State& next_state);
+  // void SteerOneStepByControl_(const State& curr_state, 
+  //                             const Control& control, 
+  //                             State& next_state);
+  // State GetNextStateByCurvature_(const State& curr_state, const float curvature);
+  // tuple<Vector2f, float, float, float, int> getTravelledArc_(const State& baselink_state, const float curvature);
   float GetTravelledDistOneStep_();
   float GetCost_(const Control& u);
 };
