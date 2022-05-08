@@ -11,16 +11,19 @@ int main() {
   State start_state(Vector2f(-32, 20), -M_PI_2);
   State goal_state(Vector2f(-30, 20), 0.0);
 
-  Control next_control;
-  next_control.a = 0;
-  next_control.c = -1.0;
-  State next_state;
-  if (planner.SteerOneStep_(start_state, goal_state, next_state, next_control)) {
-    cout << next_state << endl;
-    cout << "next_control.c: " << next_control.c << endl;
-  } else {
-    cout << "cannot steer one step" << endl;
-  }
+  // Control next_control;
+  // next_control.a = 0;
+  // next_control.c = -1.0;
+  // State next_state;
+  // if (planner.SteerOneStep_(start_state, goal_state, next_state, next_control)) {
+  //   cout << next_state << endl;
+  //   cout << "next_control.c: " << next_control.c << endl;
+  // } else {
+  //   cout << "cannot steer one step" << endl;
+  // }
+
+  // Trajectory traj = planner.Steer_(start_state, goal_state, next_state);
+  // cout << next_state << endl;
   
 
 }

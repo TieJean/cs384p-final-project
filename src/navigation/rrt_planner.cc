@@ -22,6 +22,16 @@ namespace rrt_planner {
 
 config_reader::ConfigReader config_reader_({"config/navigation.lua"});
 
+float distBtwStates(const State& state1, const State& state2) {
+  return (state1.loc - state2.loc).norm();
+}
+
+void pointInBaselinkToWolrd(const State& baselink_state,
+                            const Vector2f& point_in_baselink,
+                            Vector2f& point_in_world) {
+  point_in_world = Rotation2Df(baselink_state.angle) * point_in_baselink + baselink_state.loc;
+}
+
 RRTPlanner::RRTPlanner() 
   : global_goal_mloc_(0,0),
     global_goal_mangle_(0),
@@ -67,10 +77,8 @@ bool RRTPlanner::AtGoal(const State& state_baselink) {
   return AtGoal(state_baselink.loc);
 }
 
-void pointInBaselinkToWolrd(const State& baselink_state,
-                            const Vector2f& point_in_baselink,
-                            Vector2f& point_in_world) {
-  point_in_world = Rotation2Df(baselink_state.angle) * point_in_baselink + baselink_state.loc;
+bool RRTPlanner::AtGoalState_(const State& state, const State& goal_state) {
+  return distBtwStates(state, goal_state) < 0.5; // TODO hardcoded for now
 }
 
 tuple<Vector2f, float> 
@@ -94,7 +102,7 @@ getTurningCenterAndRadiusByCurvature(const State& baselink_state, const float cu
  * @return <4> rotation_sign 
  */
 tuple<Vector2f, float, float, float, int>
-RRTPlanner::getTravelledArc_(const State& baselink_state, const float curvature) {
+RRTPlanner::GetTravelledArc_(const State& baselink_state, const float curvature) {
   float dist_traveled = GetTravelledDistOneStep_();
 
   auto center_and_r_c = getTurningCenterAndRadiusByCurvature(baselink_state, curvature);
@@ -106,21 +114,6 @@ RRTPlanner::getTravelledArc_(const State& baselink_state, const float curvature)
   float a_angle_end = r_c > 0 ? -M_PI_2 + baselink_state.angle + a_delta : baselink_state.angle + M_PI_2;
   // int rotation_sign = r_c > 0 ? 1 : -1;
   int rotation_sign = 1; // TODO check for correctness
-  return std::make_tuple(a_center, a_radius, a_angle_start, a_angle_end, rotation_sign);
-}
-
-tuple<Vector2f, float, float, float, int>
-RRTPlanner::getTravelledArcRobotAngle_(const State& baselink_state, const float curvature) {
-  float dist_traveled = GetTravelledDistOneStep_();
-
-  auto center_and_r_c = getTurningCenterAndRadiusByCurvature(baselink_state, curvature);
-  Vector2f a_center = std::get<0>(center_and_r_c);
-  float r_c = std::get<1>(center_and_r_c);
-  float a_radius = abs(r_c);
-  float a_delta = dist_traveled / r_c; // positive if counterclock-wise
-  float a_angle_start = baselink_state.angle;
-  float a_angle_end = baselink_state.angle + a_delta;
-  int rotation_sign = r_c > 0 ? 1 : -1;
   return std::make_tuple(a_center, a_radius, a_angle_start, a_angle_end, rotation_sign);
 }
 
@@ -171,7 +164,7 @@ bool RRTPlanner::SteerOneStepByControl_(const State& curr_state, const Control& 
     }
   } else { // for non-zero curvatures
     // cout << "case2" << endl;
-    auto arc_travelled  = getTravelledArc_(curr_state, c);
+    auto arc_travelled  = GetTravelledArc_(curr_state, c);
     Vector2f a_center   = std::get<0>(arc_travelled);
     float a_radius      = std::get<1>(arc_travelled);
     float a_angle_start = std::get<2>(arc_travelled);
@@ -201,10 +194,6 @@ bool RRTPlanner::SteerOneStepByControl_(const State& curr_state, const Control& 
   return distance >= CONFIG_RRT_CLEARANCE;
 }
 
-float distBtwStates(const State& state1, const State& state2) {
-  return (state1.loc - state2.loc).norm();
-}
-
 // greedy, but no optimality guarantee
 // pick curvature that can take robot closest to goal_state
 bool RRTPlanner::SteerOneStep_(const State& start_state, 
@@ -219,10 +208,9 @@ bool RRTPlanner::SteerOneStep_(const State& start_state,
     Control control;
     control.c = c;
     control.a = 0; // TODO FIXME
-    cout << endl;
     if (SteerOneStepByControl_(start_state, control, next_state_by_curvature)) {
-      cout << "c = " << c << endl;
-      cout << "next_state_by_curvature: " << next_state_by_curvature << endl;
+      // cout << "c = " << c << endl;
+      // cout << "next_state_by_curvature: " << next_state_by_curvature << endl;
       foundCollisionFreeCurvature = true;
       float dist_to_goal_state = distBtwStates(next_state_by_curvature, goal_state);
       if (dist_to_goal_state < best_dist) {
@@ -259,6 +247,7 @@ Trajectory RRTPlanner::Steer_(const State& start_state,
     } else {
       return traj;
     }
+    if (AtGoalState_(next_state_one_step, goal_state)) { break; }
     if (AtGoal(next_state_one_step)) { break; }
   }
   next_state = next_state_one_step;
@@ -280,7 +269,7 @@ void RRTPlanner::VisualizePath(VisualizationMsg& global_viz_msg) {
 
 void RRTPlanner::VisualizeTraj(const Trajectory& traj, VisualizationMsg& global_viz_msg) {
   for (size_t t = 0; t < traj.state.size(); ++t) {
-    auto arc = getTravelledArc_(traj.state[t], traj.control[t].c);
+    auto arc = GetTravelledArc_(traj.state[t], traj.control[t].c);
     Vector2f center   = std::get<0>(arc);
     float radius      = std::get<1>(arc);
     float start_angle = std::get<2>(arc);
