@@ -38,8 +38,8 @@ struct Trajectory {
 struct TreeNode {
   shared_ptr<TreeNode> parent;
   float cost;
-  Vector2f location;
-  vector<shared_ptr<TreeNode>> children;
+  State state;
+  set<shared_ptr<TreeNode>> children;
   TreeNode() {}
   TreeNode(const TreeNode& parent, float cost) {
     this->parent = make_shared<TreeNode>(parent);
@@ -64,7 +64,9 @@ private:
 	float global_goal_mangle_;
   bool global_goal_set_;
   TreeNode root_;
-
+  TreeNode root_;
+  KDTree= nn_tree;
+  unordered_map<Vector2f,TreeNode> rrt_tree
   const float t_interval_ = 0.5;
   const float kEpsilon = 1e-4;
 
@@ -91,6 +93,8 @@ private:
   tuple<Vector2f, float, float, float, int> getTravelledArc_(const State& baselink_state, const float curvature);
   float GetTravelledDistOneStep_();
   float GetCost_(const Control& u);
+  bool isCollisionFree(const State& start_state, const State& end_state,State& next_state);
+  Trajectory getTrajCost(const State& start_state, const State& end_state);
 };
 
 }

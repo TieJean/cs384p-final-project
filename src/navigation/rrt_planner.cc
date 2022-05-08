@@ -37,21 +37,103 @@ void RRTPlanner::SetGlobalGoal(const Vector2f &loc, const float angle) {
 }
 
 // implement RRT*
+bool RRTPlanner::isCollisionFree(const State& start_state, const State& end_state){
+
+    //check if end_state is within the map and a wall isnt withing a bounding box around end_state
+    //check to see if there is a valid path from start_state to end_state 
+    return false
+}
+Trajectory RRTPlanner::getTrajCost(const State& start_state, const State& end_state){
+    return NULL
+}
+      // implement RRT*
+
 void RRTPlanner::GetGlobalPlan(const Vector2f& odom_loc, const float odom_angle) {
-  // double x_rand= UniformRandom(-50,50);
-  // double y_rand= UniformRandom(-50,50);
-  // Vector2f rand_point(x_rand,y_rand);
-  // double radius = 1;
-  // // check if randomly sampled point is within radius of nearest node
-  // auto nearest_points = tree.neighborhood_points(rand_point, radius);
-  // for (Vector2f tree_point : nearest_points) {
-  //   // check if there is no collision along path to random point from nearest point  
-  //    if (collision_free (tree_point,rand_point)){
-  //     Vector2f intermediate_point;
+    double x_rand= UniformRandom(-50,50);
+    double y_rand= UniformRandom(-50,50);
+    double radius = 1;
+    Vector2f rand_point(x_rand,y_rand);
+    TreeNode rand_point_;
+    rand_point_.state.loc= rand_point; 
+    
+
+    // check if randomly sampled point is within radius of nearest node
+
+    //============================================================================
+    // change this to work with new kd_tree functions
+    auto nearest_points = tree.neighborhood_points(rand_point_.state.loc, radius);
+    //============================================================================
+    //add tree nodes to a hashmap to quickly index them 
+
+    TreeNode min_cost_point;
+    TreeNode rand_tree_point;
+    min_cost_point.cost=math.INF;
+
+    bool collision_free_path = false;
+    int  min_cost_point_index =-1;
+    double intermediate_state_cost=-1;
+    State intermediate_state;
+    State closest_intermediate_state;
+    int i=0;
+    vector<int> points_to_remove;
+    for (Vector2f tree_point : nearest_points) {
+        tree_point_ = rrt_tree[tree_point];
+
+        // check if there is no collision along path to random point from nearest point probably change with steer_
+        
+        if (isCollisionFree (tree_point_.state,rand_point_.state,intermediate_state)){
+            collision_free_path=true;
+            
+            //find lowest cost path to rand_point
+            double intermediate_cost = GetCost_(tree_point_.state,intermediate_state);
+
+            //calculate cost from tree_point to intermediate_point
+
+            if (tree_point_.cost+intermediate_cost<min_cost_point.cost){
+                min_cost_point=tree_point_;
+                min_cost_point_index=i;
+                rand_point_.cost = tree_point_.cost+ intermediate_cost;
+                closest_intermediate_state= intermediate_state
+                    
+            }
+        }
+        else{
+            points_to_remove.push_back(i);
+        }
+        i+=1
+    }
+
+    // could probably change nearest_points to be a set or something so dont need to sort before removal
+    points_to_remove.push_back(min_cost_point_index);
+    sort(nearest_points.begin(), nearest_points.end(), greater<int>());
+    //remove min_cost_point and points that are not collision free
+    for(int indx: points_to_remove){
+        nearest_points.erase(nearest_points.begin()+indx);
+    }
+    
+    // add intermediate point to tree
+    if(collision_free_path){
+        rand_point_.state=closest_intermediate_state;
+        rand_point_.parent = min_cost_point; 
+        min_cost_point.children.insert(rand_point_);
+        kd_tree.insert(rand_point_.state.loc);
+    }
+            //update points in radius to point to intermediate point
 
 
-      // add node to kd tree then check nodes from parent to see if any nodes nee  to rearange connection     Steer_(tree_point,rand_point,intermediate_point);
-      // update tree_point to point to intermediate_point    }
+    for (Vector2f tree_point : nearest_points) {
+        tree_point_ = rrt_tree[tree_point];
+        //calculate cost from rand_point to tree_point
+        double cost_to_reach_tree_point= GetCost_(rand_point_.state,tree_point_.state);
+        if (rand_point_.cost+cost_to_reach_tree_point<tree_point_.cost){
+            tree_point_.parent.children.erase(tree_point_);
+            tree_point.parent= rand_point_;
+            rand_point_.children.insert(tree_point);
+        }
+    }
+
+
+
 }
   
 // checks if current location is close enough to the goal location
