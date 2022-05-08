@@ -9,7 +9,7 @@
 #include "util/random.h"
 #include <memory>
 #include <vector>
-
+#include <boost/functional/hash.hpp>
 using namespace std;
 using namespace Eigen;
 using amrl_msgs::VisualizationMsg;
@@ -36,13 +36,13 @@ struct Trajectory {
 };
 
 struct TreeNode {
-  shared_ptr<TreeNode> parent;
+  TreeNode parent;
   float cost;
   State state;
-  set<shared_ptr<TreeNode>> children;
+  set<TreeNode> children;
   TreeNode() {}
   TreeNode(const TreeNode& parent, float cost) {
-    this->parent = make_shared<TreeNode>(parent);
+    this->parent = TreeNode(parent);
   }
 };
 
@@ -59,17 +59,13 @@ public:
   void VisualizePath(VisualizationMsg& global_viz_msg);
 
 private:
-  vector_map::VectorMap map_;
+   vector_map::VectorMap map_;
   Vector2f global_goal_mloc_;
-	float global_goal_mangle_;
+  float global_goal_mangle_;
   bool global_goal_set_;
-  TreeNode root_;
-  TreeNode root_;
-  KDTree= nn_tree;
-  unordered_map<Vector2f,TreeNode> rrt_tree
+
   const float t_interval_ = 0.5;
   const float kEpsilon = 1e-4;
-
   const float MAX_VELOCITY = 1.0;
   const float MIN_CURVATURE = -1.7;
   const float MAX_CURVATURE = 1.7;
@@ -79,7 +75,8 @@ private:
   const float CAR_BASE = 0.343;
   const float CAR_WIDTH = 0.2667;
   const float CAR_WIDTH_SAFE = CAR_WIDTH + SAFE_MARGIN * 2;
-
+  KDTree nn_tree;
+  unordered_map<pair<float,float>,TreeNode,boost::hash<pair<float,float>>> rrt_tree;
   Trajectory Steer_(const State& start_state, 
                     const State& goal_state,
                     State& next_state);
