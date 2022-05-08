@@ -50,11 +50,11 @@ void RRTPlanner::SetGlobalGoal(const Vector2f &loc, const float angle) {
   global_goal_set_ = true;
 }
 
-bool RRTPlanner::isStateCollisionFree_(const State& state) {
-  return isStateLocCollitionFree_(state.loc);
+bool RRTPlanner::IsStateCollisionFree_(const State& state) {
+  return IsStateLocCollisionFree_(state.loc);
 }
 
-bool RRTPlanner::isStateLocCollitionFree_(const Vector2f loc) {
+bool RRTPlanner::IsStateLocCollisionFree_(const Vector2f loc) {
   const float HALF_SIDE_LEN = 0.1;
 
   bool up_side_collide = false;
@@ -74,12 +74,25 @@ bool RRTPlanner::isStateLocCollitionFree_(const Vector2f loc) {
   return (!up_side_collide) && (!left_side_collide) && (!right_side_collide) && (!bottom_side_collide);
 }
 
+bool RRTPlanner::IsRandStateBad_(const State& start_state, const State& rand_state) {
+  float factor_thresh = 2.0;
+  float rand_dist_to_goal  = (rand_state.loc  - global_goal_mloc_).norm();
+  float start_dist_to_goal = (start_state.loc - global_goal_mloc_).norm();
+  float start_dist_to_rand = (start_state.loc - rand_state.loc).norm();
+  // rand is too far away from goal compared to start
+  // start is too far away from rand compared to goal
+  return rand_dist_to_goal > factor_thresh * start_dist_to_goal || start_dist_to_rand > factor_thresh * start_dist_to_goal;
+}
+
 // implement RRT*
 void RRTPlanner::GetGlobalPlan(const Vector2f& odom_loc, const float odom_angle) {
-  // float x_rand = rng_.UniformRandom(-50, 50);
-  // float y_rand = rng_.UniformRandom(-50, 50);
-  // Vector2f rand_loc(x_rand,y_rand);
-  // float radius = 10.0;
+  State start_state(odom_loc, odom_angle);
+  float x_rand = rng_.UniformRandom(-50, 50);
+  float y_rand = rng_.UniformRandom(-50, 50);
+  State rand_state(Vector2f(x_rand,y_rand), 0.0);
+  IsRandStateBad_(start_state, rand_state);
+  
+
 
 }
   

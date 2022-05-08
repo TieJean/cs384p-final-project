@@ -100,8 +100,9 @@ private:
   tuple<Vector2f, float, float, float, int> GetTravelledArc_(const State& baselink_state, const float curvature);
   float GetTravelledDistOneStep_();
   float GetCost_(const Control& u);
-  bool isStateCollisionFree_(const State& state);
-  bool isStateLocCollitionFree_(const Vector2f loc);
+  bool IsStateCollisionFree_(const State& state);
+  bool IsStateLocCollisionFree_(const Vector2f loc);
+  bool IsRandStateBad_(const State& start_state, const State& rand_state);
 };
 
 }
