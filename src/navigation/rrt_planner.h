@@ -39,12 +39,16 @@ struct Trajectory {
   vector<State> state;
   vector<Control> control;
   float time;
+  Trajectory() {}
+  Trajectory(const vector<State>& state, const vector<Control>& control, const float time) 
+    : state(state), control(control), time(time) {}
 };
 
 struct TreeNode {
   shared_ptr<TreeNode> parent;
   State state;
   float cost;
+  Trajectory trajectory;
   set<shared_ptr<TreeNode>> children;
 
   TreeNode() {
@@ -66,6 +70,7 @@ public:
   RRTPlanner();
   void SetMap(const string &map_file);
   void SetGlobalGoal(const Vector2f &loc, const float angle);
+  bool RetrieveGlobalPlan_(); // TODO move to private
   bool GetGlobalPlan(const Vector2f& odom_loc, const float odom_angle);
   Vector2f GetLocalGoal(const Vector2f& robot_mloc, const float robot_mangle);
   bool AtGoal(const Vector2f& robot_mloc);
@@ -87,6 +92,7 @@ private:
   shared_ptr<TreeNode> root_;
   shared_ptr<TreeNode> goal_;
   util_random::Random rng_;
+  vector<State> gloabal_plan_;
 
   const float t_interval_ = 0.5;
   const float kEpsilon = 1e-4;

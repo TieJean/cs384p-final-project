@@ -1,6 +1,7 @@
 #include <glog/logging.h>
 #include <cmath>
 #include <tuple>
+#include <algorithm>
 #include "shared/math/math_util.h"
 #include "shared/util/timer.h"
 #include "shared/util/random.h"
@@ -87,6 +88,19 @@ bool RRTPlanner::IsRandStateBad_(const State& start_state, const State& rand_sta
   return rand_dist_to_goal > factor_thresh * start_dist_to_goal || start_dist_to_rand > factor_thresh * start_dist_to_goal;
 }
 
+bool RRTPlanner::RetrieveGlobalPlan_() {
+  if (goal_->parent == nullptr) { return false; }
+  gloabal_plan_.clear();
+  while (goal_->parent != root_) {
+    while (!goal_->trajectory.state.empty()) {
+      gloabal_plan_.push_back(goal_->trajectory.state.back());
+      goal_->trajectory.state.pop_back();
+    }
+  }
+  std::reverse(gloabal_plan_.begin(), gloabal_plan_.end());
+  return true;
+}
+
 // implement RRT*: https://docs.google.com/presentation/d/1RcltuVrbIx6wGGV1e5iqGIvMAVDnLJxu08OF-Pb0V4Y/edit#slide=id.ga2146f52c9_0_123
 bool RRTPlanner::GetGlobalPlan(const Vector2f& odom_loc, const float odom_angle) {
   const size_t MAX_N_ITER = 1000;
@@ -141,6 +155,7 @@ bool RRTPlanner::GetGlobalPlan(const Vector2f& odom_loc, const float odom_angle)
     new_node->state = new_state_nearest_node;
     cost_to_new_state = nearest_node->cost + GetTrajCost_(traj_to_new_state);
     new_node->cost = cost_to_new_state < new_node->cost ? cost_to_new_state : new_node->cost;
+    new_node->trajectory = traj_to_new_state;
     candidate_parent = nearest_node;
 
     for (const auto& node : nodes_around_rand) {
@@ -149,6 +164,7 @@ bool RRTPlanner::GetGlobalPlan(const Vector2f& odom_loc, const float odom_angle)
       cost_to_new_state = node->cost + GetTrajCost_(traj_to_new_state);
       if (cost_to_new_state < new_node->cost) {
         new_node->cost = cost_to_new_state;
+        new_node->trajectory = traj_to_new_state;
         candidate_parent = node;
       }
     }
@@ -162,6 +178,7 @@ bool RRTPlanner::GetGlobalPlan(const Vector2f& odom_loc, const float odom_angle)
       if (!Steer_(new_node->state, node->state, new_state, traj_to_new_state)) { continue; }
       cost_to_new_state = new_node->cost + GetTrajCost_(traj_to_new_state);
       if (cost_to_new_state < node->cost) {
+        node->trajectory = traj_to_new_state;
         node->parent->children.erase(node);
         node->parent = new_node;
         node->parent->children.insert(node);
