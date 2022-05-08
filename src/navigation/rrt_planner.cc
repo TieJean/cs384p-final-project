@@ -27,6 +27,10 @@ float distBtwStates(const State& state1, const State& state2) {
   return (state1.loc - state2.loc).norm();
 }
 
+float distBtwTreeNodes(const TreeNode& node1, const TreeNode& node2) {
+  return distBtwStates(node1.state, node2.state);
+}
+
 void pointInBaselinkToWolrd(const State& baselink_state,
                             const Vector2f& point_in_baselink,
                             Vector2f& point_in_world) {
@@ -87,12 +91,50 @@ bool RRTPlanner::IsRandStateBad_(const State& start_state, const State& rand_sta
 // implement RRT*
 void RRTPlanner::GetGlobalPlan(const Vector2f& odom_loc, const float odom_angle) {
   State start_state(odom_loc, odom_angle);
-  float x_rand = rng_.UniformRandom(-50, 50);
-  float y_rand = rng_.UniformRandom(-50, 50);
-  State rand_state(Vector2f(x_rand,y_rand), 0.0);
-  IsRandStateBad_(start_state, rand_state);
-  
+  State goal_state(global_goal_mloc_, global_goal_mangle_);
+  // vector<TreeNode> tree_nodes; // TODO redundant, replace me with tree traversal 
+  vector<shared_ptr<TreeNode>> tree_nodes; // TODO redundant, replace me with tree traversal 
+  double radius = distBtwStates(start_state, goal_state); // delibrately don't divide by 2
 
+  TreeNode new_root_node(start_state, 0.0);
+  TreeNode goal_node(goal_state, std::numeric_limits<float>::max());
+  new_root_node.parent = nullptr;  // TODO redundant
+  goal_node.parent = nullptr; // TODO redundant
+  tree_nodes.push_back(make_shared<TreeNode>(new_root_node));
+  tree_nodes.push_back(make_shared<TreeNode>(goal_node));
+
+  while (false) { // TODO FIXME
+    float x_rand = rng_.UniformRandom(-50, 50);
+    float y_rand = rng_.UniformRandom(-50, 50);
+    State rand_state(Vector2f(x_rand,y_rand), 0.0);
+    if (IsRandStateBad_(start_state, rand_state)) { continue; }
+
+    shared_ptr<TreeNode> rand_node;
+    rand_node->state = rand_state;
+    shared_ptr<TreeNode> nearest_node;
+    float min_dist_to_rand_node = std::numeric_limits<float>::max();
+
+    vector<shared_ptr<TreeNode>> nodes_around_rand;
+    for (const auto& node : tree_nodes) {
+      float dist_to_rand_node = distBtwTreeNodes(*node, *rand_node);
+      if (dist_to_rand_node <= radius) {
+        nodes_around_rand.push_back(node);
+        if (dist_to_rand_node < min_dist_to_rand_node) {
+          min_dist_to_rand_node = dist_to_rand_node;
+          nearest_node = node;
+        }
+      }
+    }
+    // found nothing
+    if (min_dist_to_rand_node > radius) { continue; }
+
+    State new_state;
+    Steer_(nearest_node->state, rand_node->state, new_state);
+    for (const auto& node : nodes_around_rand) {
+      if (node == nearest_node) { continue; }
+    }
+
+  }
 
 }
   
@@ -283,8 +325,40 @@ Trajectory RRTPlanner::Steer_(const State& start_state,
   return traj;
 }
 
+bool RRTPlanner::Steer_(const State& start_state, 
+                        const State& goal_state,
+                        State& next_state,
+                        Trajectory& traj) {
+  const size_t MAX_ITER = 1;
 
-float RRTPlanner::GetCost_(const Control& u) {
+  traj.time = 0;
+  bool found_traj = false;
+  State next_state_one_step;
+  Control next_control_one_step;
+  for (size_t t = 0; t < MAX_ITER; ++t) {
+    if (SteerOneStep_(start_state, goal_state, next_state_one_step, next_control_one_step)) {
+      found_traj = true;
+      traj.state.emplace_back(next_state_one_step);
+      traj.control.emplace_back(next_control_one_step);
+    } else {
+      return found_traj;
+    }
+    if (AtGoalState_(next_state_one_step, goal_state)) { break; }
+    if (AtGoal(next_state_one_step)) { break; }
+  }
+  next_state = next_state_one_step;
+  return found_traj;
+}
+
+float RRTPlanner::GetTrajCost(const Trajectory& traj) {
+  float total_cost = 0.0;
+  for (const auto& u : traj.control) {
+    total_cost += GetCostOneStep_(u);
+  }
+  return total_cost;
+}
+
+float RRTPlanner::GetCostOneStep_(const Control& u) {
   return (CONFIG_RRT_W_A * abs(u.a) + CONFIG_RRT_W_C * abs(u.c)) * t_interval_;
 }
 

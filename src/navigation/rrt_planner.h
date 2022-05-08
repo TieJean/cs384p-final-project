@@ -42,12 +42,18 @@ struct Trajectory {
 
 struct TreeNode {
   shared_ptr<TreeNode> parent;
-  float cost;
   State state;
+  float cost;
   set<shared_ptr<TreeNode>> children;
+
   TreeNode() {}
-  TreeNode(const TreeNode& parent, float cost) {
+  TreeNode(const TreeNode& node) 
+    : parent(node.parent), state(node.state), cost(node.cost) {}
+  TreeNode(const State& state, const float cost) : state(state), cost(cost) {}
+  TreeNode(const TreeNode& parent, const State& state, const float cost) {
     this->parent = make_shared<TreeNode>(parent);
+    this->state = state;
+    this->cost = cost;
   }
 };
 
@@ -67,6 +73,8 @@ public:
   Trajectory Steer_(const State& start_state, 
                     const State& goal_state,
                     State& next_state); // TODO move to private
+  bool Steer_(const State& start_state,  const State& goal_state,
+              State& next_state, Trajectory& traj);
 
 private:
   vector_map::VectorMap map_;
@@ -99,7 +107,8 @@ private:
   State GetNextStateByCurvature_(const State& curr_state, const float curvature);
   tuple<Vector2f, float, float, float, int> GetTravelledArc_(const State& baselink_state, const float curvature);
   float GetTravelledDistOneStep_();
-  float GetCost_(const Control& u);
+  float GetTrajCost(const Trajectory& traj);
+  float GetCostOneStep_(const Control& u);
   bool IsStateCollisionFree_(const State& state);
   bool IsStateLocCollisionFree_(const Vector2f loc);
   bool IsRandStateBad_(const State& start_state, const State& rand_state);
