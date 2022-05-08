@@ -138,7 +138,7 @@ State RRTPlanner::GetNextStateByCurvature_(const State& curr_state, const float 
     float r_c = 1.0 / curvature; // has sign
     float theta_c = dist_traveled / r_c; // has sign
     float delta_x_in_baselink = sin(theta_c) * r_c;
-    float delta_y_in_baselink = -(1 - cos(theta_c)) * r_c;
+    float delta_y_in_baselink = (1 - cos(theta_c)) * r_c;
     pointInBaselinkToWolrd(curr_state, Vector2f(delta_x_in_baselink, delta_y_in_baselink), next_loc);
     next_angle = curr_state.angle + theta_c;
   }
@@ -186,7 +186,7 @@ bool RRTPlanner::SteerOneStepByControl_(const State& curr_state, const Control& 
         distance = MinDistanceLineArc(map_line.p0, map_line.p1, a_center, a_radius, a_angle_start, a_angle_end, (int)1);
         // distance = MinDistanceLineArc(map_line.p0, map_line.p1, a_center, a_radius, (float)(0.0), (float)(0.175), 1);
       }
-      if (distance < kEpsilon) { 
+      if (distance < kEpsilon) { // TODO FIXME
         // cout << "distance: " << distance << ", curvature: " << control.c << endl;
         // cout << "p0: " << map_line.p0.transpose() << ", p1: " << map_line.p1.transpose() << endl;
         // cout << "a_center: " << a_center.transpose() << ", a_radius: " << a_radius 
@@ -219,12 +219,15 @@ bool RRTPlanner::SteerOneStep_(const State& start_state,
     Control control;
     control.c = c;
     control.a = 0; // TODO FIXME
+    cout << endl;
     if (SteerOneStepByControl_(start_state, control, next_state_by_curvature)) {
+      cout << "c = " << c << endl;
+      cout << "next_state_by_curvature: " << next_state_by_curvature << endl;
       foundCollisionFreeCurvature = true;
-      float dist_to_goal_state = distBtwStates(start_state, next_state_by_curvature);
+      float dist_to_goal_state = distBtwStates(next_state_by_curvature, goal_state);
       if (dist_to_goal_state < best_dist) {
-        cout << "dist_to_goal_state: " << dist_to_goal_state 
-             << ", best_dist: " << best_dist << ", c: " << control.c << endl;
+        // cout << "dist_to_goal_state: " << dist_to_goal_state 
+        //      << ", best_dist: " << best_dist << ", c: " << control.c << endl;
         next_state = next_state_by_curvature;
         control_to_next_state =  control;
         best_dist = dist_to_goal_state;

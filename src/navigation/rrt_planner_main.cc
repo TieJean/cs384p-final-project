@@ -8,7 +8,7 @@ int main() {
   RRTPlanner planner;
   planner.SetMap("maps/GDC1.txt");
   planner.SetGlobalGoal(Vector2f(-32, 20), 0.0);
-  State start_state(Vector2f(-32, 20), 0.0);
+  State start_state(Vector2f(-32, 20), -M_PI_2);
   State goal_state(Vector2f(-30, 20), 0.0);
 
   Control next_control;

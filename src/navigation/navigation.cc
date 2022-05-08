@@ -408,26 +408,12 @@ namespace navigation
     drawVisualizations();
     planner.VisualizePath(global_viz_msg_);
 
-    const float CURVATURE_STEP = 0.05;
     rrt_planner.SetMap("maps/GDC1.txt");
     Trajectory trajectory;
     State start_state(Vector2f(-32, 20), M_PI_4);
     State goal_state(Vector2f(-30, 20), 0.0);
     State next_next_state;
     // Control next_control;
-    State next_state;
-    for (float c = 0; c <= MAX_CURVATURE; c += CURVATURE_STEP) {
-      Control control;
-      control.a = 0;
-      control.c = c;
-      if (rrt_planner.SteerOneStepByControl_(start_state, control, next_state)) {
-
-      } else {
-        trajectory.control.emplace_back(control);
-        trajectory.state.emplace_back(start_state);
-      }
-    }
-    rrt_planner.VisualizeTraj(trajectory, global_viz_msg_);
     // cout << endl;
 
     // If odometry has not been initialized, we can't do anything.
