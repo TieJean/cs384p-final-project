@@ -356,9 +356,7 @@ bool RRTPlanner::Steer_(const State& start_state,
     traj.time += t_interval_;
     if (AtGoalState_(next_state_one_step, goal_state)) { break; }
     curr_state = next_state_one_step;
-    // if (AtGoal(next_state_one_step)) { 
-    //   break; 
-    // }
+    if (AtGoal(next_state_one_step)) { break; }
   }
   next_state = next_state_one_step;
   return found_traj;
