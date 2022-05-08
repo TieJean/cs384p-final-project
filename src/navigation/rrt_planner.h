@@ -36,10 +36,12 @@ struct Trajectory {
 };
 
 struct TreeNode {
+
   TreeNode parent;
   float cost;
   State state;
-  set<TreeNode> children;
+
+  vector<TreeNode> children;
   TreeNode() {}
   TreeNode(const TreeNode& parent, float cost) {
     this->parent = TreeNode(parent);
@@ -57,7 +59,7 @@ public:
   bool AtGoal(const Vector2f& robot_mloc);
   bool AtGoal(const State& state_baselink);
   void VisualizePath(VisualizationMsg& global_viz_msg);
-
+  
 private:
    vector_map::VectorMap map_;
   Vector2f global_goal_mloc_;
@@ -75,7 +77,7 @@ private:
   const float CAR_BASE = 0.343;
   const float CAR_WIDTH = 0.2667;
   const float CAR_WIDTH_SAFE = CAR_WIDTH + SAFE_MARGIN * 2;
-  KDTree nn_tree;
+  // KDTree nn_tree;
   unordered_map<pair<float,float>,TreeNode,boost::hash<pair<float,float>>> rrt_tree;
   Trajectory Steer_(const State& start_state, 
                     const State& goal_state,
@@ -92,6 +94,7 @@ private:
   float GetCost_(const Control& u);
   bool isCollisionFree(const State& start_state, const State& end_state,State& next_state);
   Trajectory getTrajCost(const State& start_state, const State& end_state);
+  vector<pair<float,float>> findNearestPoints( pair<float,float> rand_point, double radius);
 };
 
 }

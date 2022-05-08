@@ -35,7 +35,17 @@ void RRTPlanner::SetGlobalGoal(const Vector2f &loc, const float angle) {
   global_goal_mangle_ = angle;
   global_goal_set_ = true;
 }
-
+vector<pair<float,float>> RRTPlanner::findNearestPoints( pair<float,float> rand_point, double radius){
+    vector<pair<float,float>> inRadius;
+    for (auto& it: rrt_tree) {
+    Vector2f rand_point_vector(rand_point.first,rand_point.second);
+    Vector2f tree_vector(it.first.first,it.first.second);
+    if ((tree_vector-rand_point_vector).norm()<radius){
+        inRadius.push_back(it.first);
+    }
+}
+return inRadius;
+}
 // implement RRT*
 bool RRTPlanner::isCollisionFree(const State& start_state, const State& end_state,State& next_state){
 
@@ -53,28 +63,22 @@ void RRTPlanner::GetGlobalPlan(const Vector2f& odom_loc, const float odom_angle)
     // double y_rand= UniformRandom(-50,50);
     double radius = 1;
     pair<float,float> rand_point =make_pair(0,0);
+    Vector2f rand_point_vector(0,0);
     TreeNode rand_point_;
-    rand_point_.state.loc= rand_point; 
+    rand_point_.state.loc= rand_point_vector; 
     
+    auto nearest_points = findNearestPoints(rand_point,radius);
 
-    // check if randomly sampled point is within radius of nearest node
-
-    //============================================================================
-    // change this to work with new kd_tree functions
-    auto nearest_points = nn_tree.NNSearch(rand_point_.state.loc, radius);
-    //============================================================================
-    //add tree nodes to a hashmap to quickly index them 
 
     TreeNode min_cost_point;
     TreeNode rand_tree_point;
     min_cost_point.cost=INFINITY;
 
     bool collision_free_path = false;
-    int  min_cost_point_index =-1;
     State intermediate_state;
     State closest_intermediate_state;
     int i=0;
-    vector<int> points_to_remove;
+    vector<pair<float,float>> temp_children;
     for (auto tree_point : nearest_points) {
         TreeNode tree_point_ = rrt_tree[tree_point];
 
@@ -90,32 +94,27 @@ void RRTPlanner::GetGlobalPlan(const Vector2f& odom_loc, const float odom_angle)
 
             if (tree_point_.cost+intermediate_cost<min_cost_point.cost){
                 min_cost_point=tree_point_;
-                min_cost_point_index=i;
+
                 rand_point_.cost = tree_point_.cost+ intermediate_cost;
                 closest_intermediate_state= intermediate_state;
-
+                temp_children.push_back(tree_point);
+                i+=1;
             }
         }
-        else{
-            points_to_remove.push_back(i);
-        }
-        i+=1;
+        
+      
     }
 
-    // could probably change nearest_points to be a set or something so dont need to sort before removal
-    points_to_remove.push_back(min_cost_point_index);
-    sort(nearest_points.begin(), nearest_points.end(), greater<int>());
-    //remove min_cost_point and points that are not collision free
-    for(int indx: points_to_remove){
-        nearest_points.erase(nearest_points.begin()+indx);
-    }
-    
-    // add intermediate point to tree
+
+    // add intermediate point to tree and remove parent from nn search
     if(collision_free_path){
+        temp_children.erase(temp_children.begin()+i);
+        nearest_points= temp_children;
         rand_point_.state=closest_intermediate_state;
         rand_point_.parent = min_cost_point; 
-        min_cost_point.children.insert(rand_point_);
-        nn_tree.insert(rand_point_.state.loc);
+        min_cost_point.children.push_back(rand_point_);
+        auto new_node = make_pair(rand_point,rand_point_);
+        rrt_tree.insert(new_node);
     }
             //update points in radius to point to intermediate point
 
@@ -127,7 +126,7 @@ void RRTPlanner::GetGlobalPlan(const Vector2f& odom_loc, const float odom_angle)
         if (rand_point_.cost+cost_to_reach_tree_point<tree_point_.cost){
             tree_point_.parent.children.erase(tree_point_);
             tree_point_.parent= rand_point_;
-            rand_point_.children.insert(tree_point);
+            rand_point_.children.push_back(tree_point_);
         }
     }
 
