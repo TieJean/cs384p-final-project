@@ -9,6 +9,7 @@
 #include "util/random.h"
 #include <memory>
 #include <vector>
+#include <limits>
 
 using namespace std;
 using namespace Eigen;
@@ -46,7 +47,9 @@ struct TreeNode {
   float cost;
   set<shared_ptr<TreeNode>> children;
 
-  TreeNode() {}
+  TreeNode() {
+    this->cost = std::numeric_limits<float>::max();
+  }
   TreeNode(const TreeNode& node) 
     : parent(node.parent), state(node.state), cost(node.cost) {}
   TreeNode(const State& state, const float cost) : state(state), cost(cost) {}
@@ -63,7 +66,7 @@ public:
   RRTPlanner();
   void SetMap(const string &map_file);
   void SetGlobalGoal(const Vector2f &loc, const float angle);
-  void GetGlobalPlan(const Vector2f& odom_loc, const float odom_angle);
+  bool GetGlobalPlan(const Vector2f& odom_loc, const float odom_angle);
   Vector2f GetLocalGoal(const Vector2f& robot_mloc, const float robot_mangle);
   bool AtGoal(const Vector2f& robot_mloc);
   bool AtGoal(const State& state_baselink);
@@ -81,8 +84,8 @@ private:
   Vector2f global_goal_mloc_;
 	float global_goal_mangle_;
   bool global_goal_set_;
-  TreeNode root_;
-  KDTree kd_tree;
+  shared_ptr<TreeNode> root_;
+  shared_ptr<TreeNode> goal_;
   util_random::Random rng_;
 
   const float t_interval_ = 0.5;
