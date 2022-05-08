@@ -62,6 +62,10 @@ struct TreeNode {
     this->state = state;
     this->cost = cost;
   }
+  friend std::ostream& operator<<(std::ostream& o, const TreeNode& s) {
+    o << "state - " << s.state << "; cost - " << s.cost;
+    return o;
+  }
 };
 
 class RRTPlanner {
@@ -72,6 +76,7 @@ public:
   void SetGlobalGoal(const Vector2f &loc, const float angle);
   bool RetrieveGlobalPlan_(); // TODO move to private
   bool GetGlobalPlan(const Vector2f& odom_loc, const float odom_angle);
+  Trajectory GetGlobalTraj(); // TODO for debug
   Vector2f GetLocalGoal(const Vector2f& robot_mloc, const float robot_mangle);
   bool AtGoal(const Vector2f& robot_mloc);
   bool AtGoal(const State& state_baselink);
@@ -92,7 +97,7 @@ private:
   shared_ptr<TreeNode> root_;
   shared_ptr<TreeNode> goal_;
   util_random::Random rng_;
-  vector<State> gloabal_plan_;
+  Trajectory gloabal_plan_;
 
   const float t_interval_ = 0.5;
   const float kEpsilon = 1e-4;

@@ -408,7 +408,14 @@ namespace navigation
     drawVisualizations();
     planner.VisualizePath(global_viz_msg_);
 
-    // rrt_planner.SetMap("maps/GDC1.txt");
+    rrt_planner.SetMap("maps/GDC1.txt");
+    // cout << "after SetMap" << endl;
+    rrt_planner.SetGlobalGoal(Vector2f(-28, 20), 0.0);
+    // cout << "after SetGlobalGoal" << endl;
+    rrt_planner.GetGlobalPlan(Vector2f(-32, 20), 0.0);
+    // cout << "after GetGlobalPlan" << endl;
+    rrt_planner.VisualizeTraj(rrt_planner.GetGlobalTraj(), global_viz_msg_);
+    // cout << "after VisualizeTraj" << endl;
     // Trajectory trajectory;
     // State start_state(Vector2f(-32, 20), M_PI_4);
     // State goal_state(Vector2f(-28, 20), 0.0);

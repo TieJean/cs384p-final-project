@@ -44,6 +44,10 @@ RRTPlanner::RRTPlanner()
 
 }
 
+Trajectory RRTPlanner::GetGlobalTraj() {
+  return this->gloabal_plan_;
+}
+
 void RRTPlanner::SetMap(const string &map_file) {
   map_.Load(map_file);
 }
@@ -90,14 +94,22 @@ bool RRTPlanner::IsRandStateBad_(const State& start_state, const State& rand_sta
 
 bool RRTPlanner::RetrieveGlobalPlan_() {
   if (goal_->parent == nullptr) { return false; }
-  gloabal_plan_.clear();
-  while (goal_->parent != root_) {
-    while (!goal_->trajectory.state.empty()) {
-      gloabal_plan_.push_back(goal_->trajectory.state.back());
-      goal_->trajectory.state.pop_back();
+  gloabal_plan_.state.clear();
+  gloabal_plan_.control.clear();
+  shared_ptr<TreeNode> curr_node = goal_;
+  // size_t niter = 0;
+  while (curr_node != root_) {
+    assert(curr_node->trajectory.state.size() == curr_node->trajectory.control.size());
+    for (int i = curr_node->trajectory.state.size()-1; i >= 0; --i) {
+      gloabal_plan_.state.push_back(curr_node->trajectory.state[i]);
     }
+    for (int i = curr_node->trajectory.state.size()-1; i >= 0; --i) {
+      gloabal_plan_.control.push_back(curr_node->trajectory.control[i]);
+    }
+    curr_node = curr_node->parent;
   }
-  std::reverse(gloabal_plan_.begin(), gloabal_plan_.end());
+  std::reverse(gloabal_plan_.state.begin(),   gloabal_plan_.state.end());
+  std::reverse(gloabal_plan_.control.begin(), gloabal_plan_.control.end());
   return true;
 }
 
@@ -107,9 +119,8 @@ bool RRTPlanner::GetGlobalPlan(const Vector2f& odom_loc, const float odom_angle)
 
   State start_state(odom_loc, odom_angle);
   State goal_state(global_goal_mloc_, global_goal_mangle_);
-  // vector<TreeNode> tree_nodes; // TODO redundant, replace me with tree traversal 
   vector<shared_ptr<TreeNode>> tree_nodes; // TODO redundant, replace me with tree traversal 
-  double radius = distBtwStates(start_state, goal_state); // delibrately don't divide by 2
+  float radius = max(distBtwStates(start_state, goal_state), (float)10.0); // delibrately don't divide by 2
 
   shared_ptr<TreeNode> new_root_node = make_shared<TreeNode>(start_state, 0.0);
   shared_ptr<TreeNode> goal_node     = make_shared<TreeNode>(goal_state, std::numeric_limits<float>::max());
@@ -117,16 +128,15 @@ bool RRTPlanner::GetGlobalPlan(const Vector2f& odom_loc, const float odom_angle)
   goal_node->parent = nullptr; // TODO redundant
   tree_nodes.push_back(new_root_node);
   tree_nodes.push_back(goal_node);
-
   for (size_t i = 0; i < MAX_N_ITER; ++i) { // TODO FIXME
     float x_rand = rng_.UniformRandom(-50, 50);
     float y_rand = rng_.UniformRandom(-50, 50);
     State rand_state(Vector2f(x_rand,y_rand), 0.0);
     if (IsRandStateBad_(start_state, rand_state)) { continue; }
 
-    shared_ptr<TreeNode> rand_node;
+    shared_ptr<TreeNode> rand_node = make_shared<TreeNode>();
     rand_node->state = rand_state;
-    shared_ptr<TreeNode> nearest_node;
+    shared_ptr<TreeNode> nearest_node = make_shared<TreeNode>();
     float min_dist_to_rand_node = std::numeric_limits<float>::max();
 
     vector<shared_ptr<TreeNode>> nodes_around_rand;
@@ -143,7 +153,7 @@ bool RRTPlanner::GetGlobalPlan(const Vector2f& odom_loc, const float odom_angle)
     // found nothing
     if (min_dist_to_rand_node > radius) { continue; }
 
-    shared_ptr<TreeNode> new_node;
+    shared_ptr<TreeNode> new_node = make_shared<TreeNode>();
     new_node->cost = std::numeric_limits<float>::max(); // TODO redundant
     State new_state_nearest_node, new_state;
     Trajectory traj_to_new_state;
@@ -179,14 +189,18 @@ bool RRTPlanner::GetGlobalPlan(const Vector2f& odom_loc, const float odom_angle)
       cost_to_new_state = new_node->cost + GetTrajCost_(traj_to_new_state);
       if (cost_to_new_state < node->cost) {
         node->trajectory = traj_to_new_state;
-        node->parent->children.erase(node);
+        if (node->parent != nullptr) {
+          node->parent->children.erase(node);
+        }
         node->parent = new_node;
         node->parent->children.insert(node);
       }
     }
+    radius *= 0.95;
   }
   root_ = new_root_node;
   goal_ = goal_node;
+  RetrieveGlobalPlan_();
   return goal_->parent != nullptr;
 }
   
@@ -281,7 +295,7 @@ bool RRTPlanner::SteerOneStepByControl_(const State& curr_state, const Control& 
     for (line2f map_line : map_.lines) {
       distance = MinDistanceLineLine(map_line.p0, map_line.p1, car_front_p, car_end_p);
       if (distance < CONFIG_RRT_CLEARANCE) { 
-        cout << "p0: " << map_line.p0.transpose() << ", p1: " << map_line.p1.transpose() << endl;
+        // cout << "p0: " << map_line.p0.transpose() << ", p1: " << map_line.p1.transpose() << endl;
         break; 
       }
     }
@@ -432,14 +446,7 @@ void RRTPlanner::VisualizePath(VisualizationMsg& global_viz_msg) {
 
 }
 
-bool flag = false;
 void RRTPlanner::VisualizeTraj(const Trajectory& traj, VisualizationMsg& global_viz_msg) {
-  if (!flag) {
-    flag = true;
-    for (size_t t = 0; t < traj.state.size(); ++t) {
-
-    }
-  }
   for (size_t t = 0; t < traj.state.size(); ++t) {
     if (abs(traj.control[t].c) < kEpsilon) {
       float dist_traveled = GetTravelledDistOneStep_();
@@ -460,6 +467,4 @@ void RRTPlanner::VisualizeTraj(const Trajectory& traj, VisualizationMsg& global_
   }
 }
 
-
 }
-
