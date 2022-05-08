@@ -348,10 +348,9 @@ bool RRTPlanner::Steer_(const State& start_state,
     if (SteerOneStep_(curr_state, goal_state, next_state_one_step, next_control_one_step)) {
       found_traj = true;
       // cout << "curr_state: " << curr_state << endl;
-      traj.state.emplace_back(next_state_one_step);
+      traj.state.emplace_back(curr_state);
       traj.control.emplace_back(next_control_one_step);
     } else {
-      // cout << "cannot steer furtur" << endl;
       return found_traj;
     }
     traj.time += t_interval_;
@@ -385,7 +384,14 @@ void RRTPlanner::VisualizePath(VisualizationMsg& global_viz_msg) {
 
 }
 
+bool flag = false;
 void RRTPlanner::VisualizeTraj(const Trajectory& traj, VisualizationMsg& global_viz_msg) {
+  if (!flag) {
+    flag = true;
+    for (size_t t = 0; t < traj.state.size(); ++t) {
+
+    }
+  }
   for (size_t t = 0; t < traj.state.size(); ++t) {
     if (abs(traj.control[t].c) < kEpsilon) {
       float dist_traveled = GetTravelledDistOneStep_();
