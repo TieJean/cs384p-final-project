@@ -3,6 +3,7 @@
 #include <tuple>
 #include "shared/math/math_util.h"
 #include "shared/util/timer.h"
+#include "shared/util/random.h"
 #include "shared/ros/ros_helpers.h"
 #include "visualization/visualization.h"
 #include "kd_tree.h"
@@ -51,20 +52,9 @@ void RRTPlanner::SetGlobalGoal(const Vector2f &loc, const float angle) {
 
 // implement RRT*
 void RRTPlanner::GetGlobalPlan(const Vector2f& odom_loc, const float odom_angle) {
-  // double x_rand= UniformRandom(-50,50);
-  // double y_rand= UniformRandom(-50,50);
-  // Vector2f rand_point(x_rand,y_rand);
-  // double radius = 1;
-  // // check if randomly sampled point is within radius of nearest node
-  // auto nearest_points = tree.neighborhood_points(rand_point, radius);
-  // for (Vector2f tree_point : nearest_points) {
-  //   // check if there is no collision along path to random point from nearest point  
-  //    if (collision_free (tree_point,rand_point)){
-  //     Vector2f intermediate_point;
-
-
-      // add node to kd tree then check nodes from parent to see if any nodes nee  to rearange connection     Steer_(tree_point,rand_point,intermediate_point);
-      // update tree_point to point to intermediate_point    }
+  float x_rand = rng_.UniformRandom(-50, 50);
+  float y_rand = rng_.UniformRandom(-50, 50);
+  Vector2f rand_loc(x_rand,y_rand);
 }
   
 // checks if current location is close enough to the goal location

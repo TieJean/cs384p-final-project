@@ -43,8 +43,8 @@ struct Trajectory {
 struct TreeNode {
   shared_ptr<TreeNode> parent;
   float cost;
-  Vector2f location;
-  vector<shared_ptr<TreeNode>> children;
+  State state;
+  set<shared_ptr<TreeNode>> children;
   TreeNode() {}
   TreeNode(const TreeNode& parent, float cost) {
     this->parent = make_shared<TreeNode>(parent);
@@ -74,6 +74,8 @@ private:
 	float global_goal_mangle_;
   bool global_goal_set_;
   TreeNode root_;
+  KDTree kd_tree;
+  util_random::Random rng_;
 
   const float t_interval_ = 0.5;
   const float kEpsilon = 1e-4;
