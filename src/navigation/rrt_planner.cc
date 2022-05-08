@@ -113,9 +113,18 @@ bool RRTPlanner::RetrieveGlobalPlan_() {
   return true;
 }
 
+void printTree(const TreeNode& goal_node) {
+  cout << "---print tree---" << endl;
+  TreeNode curr_node = goal_node;
+  while (curr_node.parent != nullptr) {
+    cout << curr_node << endl;
+    curr_node = *(curr_node.parent);
+  }
+}
+
 // implement RRT*: https://docs.google.com/presentation/d/1RcltuVrbIx6wGGV1e5iqGIvMAVDnLJxu08OF-Pb0V4Y/edit#slide=id.ga2146f52c9_0_123
 bool RRTPlanner::GetGlobalPlan(const Vector2f& odom_loc, const float odom_angle) {
-  const size_t MAX_N_ITER = 1000;
+  const size_t MAX_N_ITER = 100;
 
   State start_state(odom_loc, odom_angle);
   State goal_state(global_goal_mloc_, global_goal_mangle_);
@@ -127,7 +136,6 @@ bool RRTPlanner::GetGlobalPlan(const Vector2f& odom_loc, const float odom_angle)
   new_root_node->parent = nullptr;  // TODO redundant
   goal_node->parent = nullptr; // TODO redundant
   tree_nodes.push_back(new_root_node);
-  tree_nodes.push_back(goal_node);
   for (size_t i = 0; i < MAX_N_ITER; ++i) { // TODO FIXME
     float x_rand = rng_.UniformRandom(-50, 50);
     float y_rand = rng_.UniformRandom(-50, 50);
@@ -162,6 +170,7 @@ bool RRTPlanner::GetGlobalPlan(const Vector2f& odom_loc, const float odom_angle)
 
     // find pink node (nearest_node) and green node (new_state_nearest_node)
     if (!Steer_(nearest_node->state, rand_node->state, new_state_nearest_node, traj_to_new_state)) { continue; }
+    // cout << "nearest state: " << nearest_node->state << ", rand state: " << rand_node->state << endl;
     new_node->state = new_state_nearest_node;
     cost_to_new_state = nearest_node->cost + GetTrajCost_(traj_to_new_state);
     new_node->cost = cost_to_new_state < new_node->cost ? cost_to_new_state : new_node->cost;
@@ -182,7 +191,11 @@ bool RRTPlanner::GetGlobalPlan(const Vector2f& odom_loc, const float odom_angle)
     new_node->parent = candidate_parent;
     new_node->parent->children.insert(new_node);
     tree_nodes.push_back(new_node); // TODO redundant
+    // printTree(*new_node);
 
+    if (distBtwTreeNodes(*new_node, *goal_node) < radius) {
+      nodes_around_rand.push_back(goal_node);
+    }
     for (const auto& node : nodes_around_rand) {
       if (node == new_node->parent) { continue; }
       if (!Steer_(new_node->state, node->state, new_state, traj_to_new_state)) { continue; }
