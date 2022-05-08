@@ -50,11 +50,37 @@ void RRTPlanner::SetGlobalGoal(const Vector2f &loc, const float angle) {
   global_goal_set_ = true;
 }
 
+bool RRTPlanner::isStateCollisionFree_(const State& state) {
+  return isStateLocCollitionFree_(state.loc);
+}
+
+bool RRTPlanner::isStateLocCollitionFree_(const Vector2f loc) {
+  const float HALF_SIDE_LEN = 0.1;
+
+  bool up_side_collide = false;
+  bool left_side_collide = false;
+  bool right_side_collide = false;
+  bool bottom_side_collide = false;
+  Vector2f point_top_left     = loc + Vector2f(-HALF_SIDE_LEN,  HALF_SIDE_LEN);
+  Vector2f point_top_right    = loc + Vector2f( HALF_SIDE_LEN,  HALF_SIDE_LEN);
+  Vector2f point_bottom_left  = loc + Vector2f(-HALF_SIDE_LEN, -HALF_SIDE_LEN);
+  Vector2f point_bottom_right = loc + Vector2f( HALF_SIDE_LEN, -HALF_SIDE_LEN);
+  for (line2f map_line : map_.lines) {
+    up_side_collide     = (MinDistanceLineLine(map_line.p0, map_line.p1, point_top_left, point_top_right)       > kEpsilon);
+    left_side_collide   = (MinDistanceLineLine(map_line.p0, map_line.p1, point_top_left, point_bottom_left)     > kEpsilon);
+    right_side_collide  = (MinDistanceLineLine(map_line.p0, map_line.p1, point_top_right, point_top_right)      > kEpsilon);
+    bottom_side_collide = (MinDistanceLineLine(map_line.p0, map_line.p1, point_bottom_left, point_bottom_right) > kEpsilon);
+  }
+  return (!up_side_collide) && (!left_side_collide) && (!right_side_collide) && (!bottom_side_collide);
+}
+
 // implement RRT*
 void RRTPlanner::GetGlobalPlan(const Vector2f& odom_loc, const float odom_angle) {
-  float x_rand = rng_.UniformRandom(-50, 50);
-  float y_rand = rng_.UniformRandom(-50, 50);
-  Vector2f rand_loc(x_rand,y_rand);
+  // float x_rand = rng_.UniformRandom(-50, 50);
+  // float y_rand = rng_.UniformRandom(-50, 50);
+  // Vector2f rand_loc(x_rand,y_rand);
+  // float radius = 10.0;
+
 }
   
 // checks if current location is close enough to the goal location
