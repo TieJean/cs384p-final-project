@@ -107,7 +107,7 @@ private:
   State GetNextStateByCurvature_(const State& curr_state, const float curvature);
   tuple<Vector2f, float, float, float, int> GetTravelledArc_(const State& baselink_state, const float curvature);
   float GetTravelledDistOneStep_();
-  float GetTrajCost(const Trajectory& traj);
+  float GetTrajCost_(const Trajectory& traj);
   float GetCostOneStep_(const Control& u);
   bool IsStateCollisionFree_(const State& state);
   bool IsStateLocCollisionFree_(const Vector2f loc);

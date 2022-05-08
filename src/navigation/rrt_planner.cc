@@ -128,11 +128,18 @@ void RRTPlanner::GetGlobalPlan(const Vector2f& odom_loc, const float odom_angle)
     // found nothing
     if (min_dist_to_rand_node > radius) { continue; }
 
-    State new_state;
-    Steer_(nearest_node->state, rand_node->state, new_state);
-    for (const auto& node : nodes_around_rand) {
-      if (node == nearest_node) { continue; }
-    }
+    // shared_ptr<TreeNode> new_node;
+    // State new_state, best_new_state;
+    // Trajectory traj_to_new_state;
+    // float min_cost_to_new_state, cost_to_new_state;
+
+    // if (!Steer_(nearest_node->state, rand_node->state, new_state, traj_to_new_state)) { continue; }
+    // new_node->state = new_state;
+
+    // for (const auto& node : nodes_around_rand) {
+    //   if (node == nearest_node) { continue; }
+    //   if (!Steer_(node->state, rand_node->state, new_state, traj_to_new_state)) { continue; }
+    // }
 
   }
 
@@ -234,7 +241,7 @@ bool RRTPlanner::SteerOneStepByControl_(const State& curr_state, const Control& 
       }
     }
   } else { // for non-zero curvatures
-    // cout << "case2" << endl;
+    // cout << "case2: c = " << c << endl;
     auto arc_travelled  = GetTravelledArc_(curr_state, c);
     Vector2f a_center   = std::get<0>(arc_travelled);
     float a_radius      = std::get<1>(arc_travelled);
@@ -329,28 +336,36 @@ bool RRTPlanner::Steer_(const State& start_state,
                         const State& goal_state,
                         State& next_state,
                         Trajectory& traj) {
-  const size_t MAX_ITER = 1;
+  const size_t MAX_ITER = 50; // max_dist_travelled = 50 * 1.0 * 0.5 = 25 m
 
   traj.time = 0;
   bool found_traj = false;
-  State next_state_one_step;
+  State curr_state, next_state_one_step;
   Control next_control_one_step;
+
+  curr_state = start_state;
   for (size_t t = 0; t < MAX_ITER; ++t) {
-    if (SteerOneStep_(start_state, goal_state, next_state_one_step, next_control_one_step)) {
+    if (SteerOneStep_(curr_state, goal_state, next_state_one_step, next_control_one_step)) {
       found_traj = true;
+      // cout << "curr_state: " << curr_state << endl;
       traj.state.emplace_back(next_state_one_step);
       traj.control.emplace_back(next_control_one_step);
     } else {
+      // cout << "cannot steer furtur" << endl;
       return found_traj;
     }
+    traj.time += t_interval_;
     if (AtGoalState_(next_state_one_step, goal_state)) { break; }
-    if (AtGoal(next_state_one_step)) { break; }
+    curr_state = next_state_one_step;
+    // if (AtGoal(next_state_one_step)) { 
+    //   break; 
+    // }
   }
   next_state = next_state_one_step;
   return found_traj;
 }
 
-float RRTPlanner::GetTrajCost(const Trajectory& traj) {
+float RRTPlanner::GetTrajCost_(const Trajectory& traj) {
   float total_cost = 0.0;
   for (const auto& u : traj.control) {
     total_cost += GetCostOneStep_(u);
@@ -372,15 +387,22 @@ void RRTPlanner::VisualizePath(VisualizationMsg& global_viz_msg) {
 
 void RRTPlanner::VisualizeTraj(const Trajectory& traj, VisualizationMsg& global_viz_msg) {
   for (size_t t = 0; t < traj.state.size(); ++t) {
-    auto arc = GetTravelledArc_(traj.state[t], traj.control[t].c);
-    Vector2f center   = std::get<0>(arc);
-    float radius      = std::get<1>(arc);
-    float start_angle = std::get<2>(arc);
-    float end_angle   = std::get<3>(arc);
-    // visualization::DrawCross(center, 0.3, 0xFF0000, global_viz_msg);
-    // visualization::DrawCross(traj.state[t].loc, 0.3, 0xFF0000, global_viz_msg);
-    // cout << "center: " << center.transpose() << ", radius: " << radius << ", start_angle: " << start_angle << ", end_angle: " << end_angle << endl;
-    visualization::DrawArc(center, radius, start_angle, end_angle, 0x000000, global_viz_msg);
+    if (abs(traj.control[t].c) < kEpsilon) {
+      float dist_traveled = GetTravelledDistOneStep_();
+      Vector2f baselink_end_in_world;
+      pointInBaselinkToWolrd(traj.state[t], Vector2f(dist_traveled, 0), baselink_end_in_world);
+      visualization::DrawLine(traj.state[t].loc, baselink_end_in_world, 0x000000, global_viz_msg);
+    } else {
+      auto arc = GetTravelledArc_(traj.state[t], traj.control[t].c);
+      Vector2f center   = std::get<0>(arc);
+      float radius      = std::get<1>(arc);
+      float start_angle = std::get<2>(arc);
+      float end_angle   = std::get<3>(arc);
+      // visualization::DrawCross(center, 0.3, 0xFF0000, global_viz_msg);
+      // visualization::DrawCross(traj.state[t].loc, 0.3, 0xFF0000, global_viz_msg);
+      // cout << "center: " << center.transpose() << ", radius: " << radius << ", start_angle: " << start_angle << ", end_angle: " << end_angle << endl;
+      visualization::DrawArc(center, radius, start_angle, end_angle, 0x000000, global_viz_msg);
+    }
   }
 }
 

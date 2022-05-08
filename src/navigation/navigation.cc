@@ -411,8 +411,10 @@ namespace navigation
     rrt_planner.SetMap("maps/GDC1.txt");
     Trajectory trajectory;
     State start_state(Vector2f(-32, 20), M_PI_4);
-    State goal_state(Vector2f(-30, 20), 0.0);
-    State next_next_state;
+    State goal_state(Vector2f(-28, 20), 0.0);
+    State next_state;
+    rrt_planner.Steer_(start_state, goal_state, next_state, trajectory);
+    rrt_planner.VisualizeTraj(trajectory, global_viz_msg_);
     // Control next_control;
     // cout << endl;
 
