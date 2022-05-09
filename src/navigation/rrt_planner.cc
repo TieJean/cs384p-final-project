@@ -210,7 +210,7 @@ Vector2f RRTPlanner::GetLocalGoal(const Vector2f& robot_mloc, const float robot_
 // implement RRT*: https://docs.google.com/presentation/d/1RcltuVrbIx6wGGV1e5iqGIvMAVDnLJxu08OF-Pb0V4Y/edit#slide=id.ga2146f52c9_0_123
 bool RRTPlanner::GetGlobalPlan(const Vector2f& odom_loc, const float odom_angle) {
   const size_t MAX_N_ITER = 1000;
-  const size_t EFF_N_ITER = 200;
+  const size_t EFF_N_ITER = 20;
   size_t effective_n_iter = 0;
   State start_state(odom_loc, angleMod(odom_angle));
   State goal_state(global_goal_mloc_, 0.0);
@@ -227,7 +227,7 @@ bool RRTPlanner::GetGlobalPlan(const Vector2f& odom_loc, const float odom_angle)
   // for (size_t i = 0; i < MAX_N_ITER || effective_n_iter > EFF_N_ITER; ++i) { // TODO FIXME
   for (size_t i = 0; i < MAX_N_ITER; ++i) { // TODO FIXME
     if (effective_n_iter > EFF_N_ITER) { break; }
-  cout << "i: " << i << ", effective_n_iter: " << effective_n_iter << endl;
+  // cout << "i: " << i << ", effective_n_iter: " << effective_n_iter << endl;
     float x_rand = rng_.UniformRandom(-35, -12);
     // float y_rand = rng_.UniformRandom(-50, 50);
     float y_rand = rng_.UniformRandom(0, 20);
@@ -254,8 +254,8 @@ bool RRTPlanner::GetGlobalPlan(const Vector2f& odom_loc, const float odom_angle)
     }
     // found nothing
     if (min_dist_to_rand_node > radius) { continue; }
-    cout << "nearest_node: " << *nearest_node << endl;
-    cout << "rand_node: " << *rand_node << endl;
+    // cout << "nearest_node: " << *nearest_node << endl;
+    // cout << "rand_node: " << *rand_node << endl;
 
     shared_ptr<TreeNode> new_node = make_shared<TreeNode>();
     new_node->cost = std::numeric_limits<float>::max(); // TODO redundant
@@ -265,7 +265,7 @@ bool RRTPlanner::GetGlobalPlan(const Vector2f& odom_loc, const float odom_angle)
     shared_ptr<TreeNode> candidate_parent;
 
     // find pink node (nearest_node) and green node (new_state_nearest_node)
-    if (!Steer_(nearest_node->state, rand_node->state, new_state_nearest_node, traj_to_new_state)) { continue; }
+    if (!SteerToRandNode_(nearest_node->state, rand_node->state, new_state_nearest_node, traj_to_new_state)) { continue; }
     new_node->state = new_state_nearest_node;
     cost_to_new_state = nearest_node->cost + GetTrajCost_(traj_to_new_state);
     new_node->cost = cost_to_new_state < new_node->cost ? cost_to_new_state : new_node->cost;
@@ -477,39 +477,10 @@ bool RRTPlanner::SteerOneStep_(const State& start_state,
   return foundCollisionFreeCurvature;
 }
 
-/**
- * Given start_state and goal_state, compute next_state (closest reachable state from start to goal)
- * Return Trajectory from start_state to next_state
- */
-Trajectory RRTPlanner::Steer_(const State& start_state, 
-                              const State& goal_state,
-                              State& next_state) {
-  const size_t MAX_ITER = 1;
-
-  Trajectory traj;
-  traj.time = 0;
-  State next_state_one_step;
-  Control next_control_one_step;
-  for (size_t t = 0; t < MAX_ITER; ++t) {
-    if (SteerOneStep_(start_state, goal_state, next_state_one_step, next_control_one_step)) {
-      traj.state.emplace_back(next_state_one_step);
-      traj.control.emplace_back(next_control_one_step);
-    } else {
-      return traj;
-    }
-    if (AtGoalState_(next_state_one_step, goal_state)) { break; }
-    if (AtGoal(next_state_one_step)) { break; }
-  }
-  next_state = next_state_one_step;
-  return traj;
-}
-
-bool RRTPlanner::Steer_(const State& start_state, 
-                        const State& goal_state,
-                        State& next_state,
-                        Trajectory& traj) {
-  const size_t MAX_ITER = 10; // max_dist_travelled = 10 * 1.0 * 0.5 = 5 m
-
+bool RRTPlanner::SteerByMaxIter_(const State& start_state, 
+                                 const State& goal_state,
+                                 const size_t MAX_ITER,
+                                 State& next_state, Trajectory& traj) {
   traj.state.clear();
   traj.control.clear();
   traj.time = 0;
@@ -540,6 +511,20 @@ bool RRTPlanner::Steer_(const State& start_state,
   }
   next_state = next_state_one_step;
   return found_traj;
+}
+
+bool RRTPlanner::Steer_(const State& start_state, 
+                        const State& goal_state,
+                        State& next_state,
+                        Trajectory& traj) {
+  return SteerByMaxIter_(start_state, goal_state, 10, next_state, traj);
+}
+
+bool RRTPlanner::SteerToRandNode_(const State& start_state, 
+                                  const State& goal_state,
+                                  State& next_state,
+                                  Trajectory& traj) {
+  return SteerByMaxIter_(start_state, goal_state, 5, next_state, traj);
 }
 
 float RRTPlanner::GetTrajCost_(const Trajectory& traj) {

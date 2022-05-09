@@ -131,6 +131,13 @@ private:
   bool SteerOneStepByControl_(const State& curr_state, 
                               const Control& control, 
                               State& next_state);
+  bool SteerByMaxIter_(const State& start_state, 
+                       const State& goal_state,
+                       const size_t MAX_ITER,
+                       State& next_state, Trajectory& traj);
+  bool SteerToRandNode_(const State& start_state, 
+                        const State& goal_state,
+                        State& next_state, Trajectory& traj);
   State GetNextStateByCurvature_(const State& curr_state, const float curvature);
   tuple<Vector2f, float, float, float, int> GetTravelledArc_(const State& baselink_state, const float curvature);
   float GetTravelledDistOneStep_();
