@@ -82,6 +82,7 @@ public:
   RRTPlanner();
   void SetMap(const string &map_file);
   void SetGlobalGoal(const Vector2f &loc, const float angle);
+  Vector2f GetGlobalGoal();
   bool RetrieveGlobalPlan_(); // TODO move to private
   bool GetGlobalPlan(const Vector2f& odom_loc, const float odom_angle);
   bool isGlobalPlanReady();

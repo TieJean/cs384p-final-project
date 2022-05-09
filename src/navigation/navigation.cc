@@ -412,17 +412,17 @@ namespace navigation
     drawVisualizations();
     // planner.VisualizePath(global_viz_msg_);
 
-    visualization::DrawCross(Vector2f(-22, 8), 0.3, 0xFF0000, global_viz_msg_);
-    rrt_planner.SetMap("maps/GDC1.txt");
-    cout << "after SetMap" << endl;
-    rrt_planner.SetGlobalGoal(Vector2f(-22, 8), 0.0);
-    cout << "after SetGlobalGoal" << endl;
-    if (rrt_planner.GetGlobalPlan(Vector2f(-32, 20), M_PI)) {
-      cout << "get GetGlobalPlan" << endl;
-      rrt_planner.PrintFinalPath();
-    } else {
-      cout << "GetGlobalPlan not found" << endl;
-    }
+    // visualization::DrawCross(Vector2f(-22, 8), 0.3, 0xFF0000, global_viz_msg_);
+    // rrt_planner.SetMap("maps/GDC1.txt");
+    // cout << "after SetMap" << endl;
+    // rrt_planner.SetGlobalGoal(Vector2f(-22, 8), 0.0);
+    // cout << "after SetGlobalGoal" << endl;
+    // if (rrt_planner.GetGlobalPlan(Vector2f(-32, 20), M_PI)) {
+    //   cout << "get GetGlobalPlan" << endl;
+    //   rrt_planner.PrintFinalPath();
+    // } else {
+    //   cout << "GetGlobalPlan not found" << endl;
+    // }
     rrt_planner.VisualizeTraj(rrt_planner.GetGlobalTraj(), global_viz_msg_);
     // cout << "after VisualizeTraj" << endl;
 
@@ -432,8 +432,9 @@ namespace navigation
 
     // if (!planner.AtGoal(robot_loc_)) {
     if (!rrt_planner.AtGoal(robot_loc_)) {
-      // makeControlDecision();
-      drive_msg_.velocity = 0.0;
+      // cout << "robot_loc_: " << robot_loc_.transpose() << ", rrt_planner.GetGlobalGoal(): " << rrt_planner.GetGlobalGoal().transpose() << endl;
+      makeControlDecision();
+      // drive_msg_.velocity = 0.0;
     } else {
       drive_msg_.velocity = 0.0;
     }

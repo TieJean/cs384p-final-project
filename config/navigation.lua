@@ -1,5 +1,5 @@
 -- rrt_planner
-RRT_STOP_DIST = 0.7;
+RRT_STOP_DIST = 0.5;
 RRT_W_A = 1.0;
 RRT_W_C = 1.0;
 RRT_CLEARANCE = 0.3;
