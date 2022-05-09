@@ -74,6 +74,8 @@ struct TreeNode {
   }
 };
 
+void printTree(const TreeNode& goal_node);
+
 class RRTPlanner {
 
 public:
@@ -95,6 +97,7 @@ public:
                     State& next_state); // TODO move to private
   bool Steer_(const State& start_state,  const State& goal_state,
               State& next_state, Trajectory& traj);
+  void PrintFinalPath();
 
 private:
   vector_map::VectorMap map_;
@@ -108,18 +111,18 @@ private:
   int path_start_idx_;
   bool found_gloabal_plan_;
 
-  const float t_interval_ = 0.5;
-  const float kEpsilon = 1e-4;
+  float t_interval_ = 0.5;
+  float kEpsilon = 1e-4;
 
-  const float MAX_VELOCITY = 1.0;
-  const float MIN_CURVATURE = -1.7;
-  const float MAX_CURVATURE = 1.7;
-  const float SAFE_MARGIN = 0.1;
-  const float CAR_LENGTH = 0.4826;
-  const float CAR_LENGTH_SAFE = CAR_LENGTH + SAFE_MARGIN * 2;
-  const float CAR_BASE = 0.343;
-  const float CAR_WIDTH = 0.2667;
-  const float CAR_WIDTH_SAFE = CAR_WIDTH + SAFE_MARGIN * 2;
+  float MAX_VELOCITY = 1.0;
+  float MIN_CURVATURE = -1.7;
+  float MAX_CURVATURE = 1.7;
+  float SAFE_MARGIN = 0.1;
+  float CAR_LENGTH = 0.4826;
+  float CAR_LENGTH_SAFE = CAR_LENGTH + SAFE_MARGIN * 2;
+  float CAR_BASE = 0.343;
+  float CAR_WIDTH = 0.2667;
+  float CAR_WIDTH_SAFE = CAR_WIDTH + SAFE_MARGIN * 2;
 
   bool SteerOneStep_(const State& start_state, 
                      const State& goal_state,

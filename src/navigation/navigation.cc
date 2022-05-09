@@ -35,7 +35,7 @@
 #include <cmath>
 #include "config_reader/config_reader.h"
 
-#include "planner.h"
+// #include "planner.h"
 #include "rrt_planner.h"
 
 using amrl_msgs::AckermannCurvatureDriveMsg;
@@ -51,7 +51,7 @@ using std::vector;
 
 using namespace math_util;
 using namespace ros_helpers;
-using namespace planner;
+// using namespace planner;
 using namespace rrt_planner;
 
 namespace
@@ -93,18 +93,21 @@ namespace navigation
         "map", "navigation_global");
     InitRosHeader("base_link", &drive_msg_.header);
     acceleration_ = 0.0;
-    planner = Planner(); // TODO
-    planner.SetMap(map_file);
+    // planner = Planner(); // TODO
+    // planner.SetMap(map_file);
+    rrt_planner = RRTPlanner();
+    rrt_planner.SetMap(map_file);
   }
 
   void Navigation::SetNavGoal(const Vector2f &loc, float angle)
   {
     nav_goal_loc_ = loc;
     nav_goal_angle_ = angle;
-    planner.SetGlobalGoal(loc, angle);
-    planner.GetGlobalPlan(robot_loc_, robot_angle_);
+    // planner.SetGlobalGoal(loc, angle);
+    // planner.GetGlobalPlan(robot_loc_, robot_angle_);
     rrt_planner.SetGlobalGoal(loc, angle);
-    rrt_planner.GetGlobalPlan(robot_loc_, robot_angle_);
+    while (!rrt_planner.GetGlobalPlan(robot_loc_, robot_angle_)) {}
+    cout << "found global plan" << endl;
   }
 
   void Navigation::UpdateLocation(const Eigen::Vector2f &loc, float angle)
@@ -335,7 +338,8 @@ namespace navigation
   }
 
   struct PathOption Navigation::getBestPathOption() {
-    Vector2f local_goal_loc = planner.GetLocalGoal(robot_loc_, robot_angle_);
+    // Vector2f local_goal_loc = planner.GetLocalGoal(robot_loc_, robot_angle_);
+    Vector2f local_goal_loc = rrt_planner.GetLocalGoal(robot_loc_, robot_angle_);
     visualization::DrawCross(local_goal_loc, 0.3, 0x008000, global_viz_msg_);
     visualization::DrawArc(Vector2f(0,0), CONFIG_MAX_LOCAL_GOAL_DIST, 0, M_PI * 2, 0xe608ff, local_viz_msg_);
     
@@ -406,31 +410,30 @@ namespace navigation
     visualization::ClearVisualizationMsg(global_viz_msg_);
 
     drawVisualizations();
-    planner.VisualizePath(global_viz_msg_);
+    // planner.VisualizePath(global_viz_msg_);
 
+    visualization::DrawCross(Vector2f(-22, 8), 0.3, 0xFF0000, global_viz_msg_);
     rrt_planner.SetMap("maps/GDC1.txt");
-    // cout << "after SetMap" << endl;
+    cout << "after SetMap" << endl;
     rrt_planner.SetGlobalGoal(Vector2f(-22, 8), 0.0);
-    // cout << "after SetGlobalGoal" << endl;
-    rrt_planner.GetGlobalPlan(Vector2f(-32, 20), M_PI);
-    // cout << "after GetGlobalPlan" << endl;
+    cout << "after SetGlobalGoal" << endl;
+    if (rrt_planner.GetGlobalPlan(Vector2f(-32, 20), M_PI)) {
+      cout << "get GetGlobalPlan" << endl;
+      rrt_planner.PrintFinalPath();
+    } else {
+      cout << "GetGlobalPlan not found" << endl;
+    }
     rrt_planner.VisualizeTraj(rrt_planner.GetGlobalTraj(), global_viz_msg_);
-    // Trajectory trajectory;
-    // State start_state(Vector2f(-32, 20), M_PI_4);
-    // State goal_state(Vector2f(-28, 20), 0.0);
-    // State next_state;
-    // rrt_planner.Steer_(start_state, goal_state, next_state, trajectory);
-    // rrt_planner.VisualizeTraj(trajectory, global_viz_msg_);
-    // Control next_control;
-    // cout << endl;
+    // cout << "after VisualizeTraj" << endl;
 
     // If odometry has not been initialized, we can't do anything.
     if (!odom_initialized_)
       return;
 
-    if (!planner.AtGoal(robot_loc_)) {
-      makeControlDecision();
-      // drive_msg_.curvature = 0.0;
+    // if (!planner.AtGoal(robot_loc_)) {
+    if (!rrt_planner.AtGoal(robot_loc_)) {
+      // makeControlDecision();
+      drive_msg_.velocity = 0.0;
     } else {
       drive_msg_.velocity = 0.0;
     }

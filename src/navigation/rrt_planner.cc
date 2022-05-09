@@ -33,6 +33,26 @@ float distBtwTreeNodes(const TreeNode& node1, const TreeNode& node2) {
   return distBtwStates(node1.state, node2.state);
 }
 
+float angleMod(const float& angle) {
+  float ret = angle;
+  if (ret < M_PI && ret > -M_PI) { return ret; }
+  if (ret < 0) {
+    while (ret  + 2 * M_PI < 0) {
+      ret += (2 * M_PI);
+    }
+  } else {
+    while (ret - 2 * M_PI > 0) {
+      ret -= (2 * M_PI);
+    }
+  }
+  if (ret > M_PI) {
+    ret = 2 * M_PI - ret;
+  } else if (angle < -M_PI) {
+    ret = 2 * M_PI + ret;
+  }
+  return ret;
+}
+
 void pointInBaselinkToWolrd(const State& baselink_state,
                             const Vector2f& point_in_baselink,
                             Vector2f& point_in_world) {
@@ -59,6 +79,10 @@ RRTPlanner::RRTPlanner()
 
 Trajectory RRTPlanner::GetGlobalTraj() {
   return this->global_plan_;
+}
+
+void RRTPlanner::PrintFinalPath() {
+  printTree(*goal_);
 }
 
 bool RRTPlanner::isGlobalPlanReady() {
@@ -105,7 +129,7 @@ bool RRTPlanner::IsStateLocCollisionFree_(const Vector2f loc) {
 }
 
 bool RRTPlanner::IsRandStateBad_(const State& start_state, const State& rand_state) {
-  float factor_thresh = 2.0;
+  float factor_thresh = 1.5;
   float rand_dist_to_goal  = (rand_state.loc  - global_goal_mloc_).norm();
   float start_dist_to_goal = (start_state.loc - global_goal_mloc_).norm();
   float start_dist_to_rand = (start_state.loc - rand_state.loc).norm();
@@ -143,7 +167,9 @@ Vector2f RRTPlanner::GetLocalGoal(const Vector2f& robot_mloc, const float robot_
   int i = path_start_idx_;
   while (i < n_states && (global_plan_.state[i].loc-robot_mloc).norm() <  CONFIG_RRT_LOCAL_HORIZON) { ++i; }
   if (i == path_start_idx_) {
-    while (!GetGlobalPlan(robot_mloc, robot_mangle)) {}
+    if (!GetGlobalPlan(robot_mloc, robot_mangle)) { // TODO
+      LOG(FATAL) << "Failed to find global plan!" << endl;
+    }
     found_gloabal_plan_ = true;
   }
   path_start_idx_ = i;
@@ -154,8 +180,8 @@ Vector2f RRTPlanner::GetLocalGoal(const Vector2f& robot_mloc, const float robot_
 bool RRTPlanner::GetGlobalPlan(const Vector2f& odom_loc, const float odom_angle) {
   const size_t MAX_N_ITER = 200;
   size_t effective_n_iter = 0;
-  State start_state(odom_loc, odom_angle);
-  State goal_state(global_goal_mloc_, global_goal_mangle_);
+  State start_state(odom_loc, angleMod(odom_angle));
+  State goal_state(global_goal_mloc_, 0.0);
   vector<shared_ptr<TreeNode>> tree_nodes; // TODO redundant, replace me with tree traversal 
   float radius = max(distBtwStates(start_state, goal_state), (float)10.0); // delibrately don't divide by 2
 
@@ -199,7 +225,6 @@ bool RRTPlanner::GetGlobalPlan(const Vector2f& odom_loc, const float odom_angle)
 
     // find pink node (nearest_node) and green node (new_state_nearest_node)
     if (!Steer_(nearest_node->state, rand_node->state, new_state_nearest_node, traj_to_new_state)) { continue; }
-    // cout << "nearest state: " << nearest_node->state << ", rand state: " << rand_node->state << endl;
     new_node->state = new_state_nearest_node;
     cost_to_new_state = nearest_node->cost + GetTrajCost_(traj_to_new_state);
     new_node->cost = cost_to_new_state < new_node->cost ? cost_to_new_state : new_node->cost;
@@ -230,6 +255,7 @@ bool RRTPlanner::GetGlobalPlan(const Vector2f& odom_loc, const float odom_angle)
       if (!Steer_(new_node->state, node->state, new_state, traj_to_new_state)) { continue; }
       cost_to_new_state = new_node->cost + GetTrajCost_(traj_to_new_state);
       if (cost_to_new_state < node->cost) {
+        node->cost = cost_to_new_state;
         node->trajectory = traj_to_new_state;
         if (node->parent != nullptr) {
           node->parent->children.erase(node);
@@ -244,6 +270,7 @@ bool RRTPlanner::GetGlobalPlan(const Vector2f& odom_loc, const float odom_angle)
   root_ = new_root_node;
   goal_ = goal_node;
   RetrieveGlobalPlan_();
+  cout << "effective_n_iter: " << effective_n_iter << ", final radius: " << radius << endl;
   // printTree(*goal_);
   return goal_->parent != nullptr;
 }
@@ -314,7 +341,7 @@ State RRTPlanner::GetNextStateByCurvature_(const State& curr_state, const float 
     float delta_x_in_baselink = sin(theta_c) * r_c;
     float delta_y_in_baselink = (1 - cos(theta_c)) * r_c;
     pointInBaselinkToWolrd(curr_state, Vector2f(delta_x_in_baselink, delta_y_in_baselink), next_loc);
-    next_angle = curr_state.angle + theta_c;
+    next_angle = angleMod(curr_state.angle + theta_c);
   }
   State next_state;
   next_state.loc = next_loc;
@@ -439,7 +466,7 @@ bool RRTPlanner::Steer_(const State& start_state,
                         const State& goal_state,
                         State& next_state,
                         Trajectory& traj) {
-  const size_t MAX_ITER = 50; // max_dist_travelled = 50 * 1.0 * 0.5 = 25 m
+  const size_t MAX_ITER = 20; // max_dist_travelled = 20 * 1.0 * 0.5 = 10 m
 
   traj.state.clear();
   traj.control.clear();
@@ -459,13 +486,15 @@ bool RRTPlanner::Steer_(const State& start_state,
     }
     traj.time += t_interval_;
     if (AtGoalState_(next_state_one_step, goal_state)) { 
+      // cout << "at goal state" << endl;
       found_traj = true;
       break; 
     }
-    if (AtGoal(next_state_one_step)) { 
-      found_traj = true;
-      break; 
-    }
+    // if (AtGoal(next_state_one_step)) { 
+    //   cout << "at goal" << endl;
+    //   found_traj = true;
+    //   break; 
+    // }
     curr_state = next_state_one_step;
   }
   next_state = next_state_one_step;
