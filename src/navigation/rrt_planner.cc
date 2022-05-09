@@ -37,6 +37,16 @@ void pointInBaselinkToWolrd(const State& baselink_state,
   point_in_world = Rotation2Df(baselink_state.angle) * point_in_baselink + baselink_state.loc;
 }
 
+void printTree(const TreeNode& goal_node) {
+  cout << "---print tree---" << endl;
+  TreeNode curr_node = goal_node;
+  while (curr_node.parent != nullptr) {
+    cout << curr_node << endl;
+    cout << curr_node.trajectory << endl;
+    curr_node = *(curr_node.parent);
+  }
+}
+
 RRTPlanner::RRTPlanner() 
   : global_goal_mloc_(0,0),
     global_goal_mangle_(0),
@@ -113,19 +123,10 @@ bool RRTPlanner::RetrieveGlobalPlan_() {
   return true;
 }
 
-void printTree(const TreeNode& goal_node) {
-  cout << "---print tree---" << endl;
-  TreeNode curr_node = goal_node;
-  while (curr_node.parent != nullptr) {
-    cout << curr_node << endl;
-    curr_node = *(curr_node.parent);
-  }
-}
-
 // implement RRT*: https://docs.google.com/presentation/d/1RcltuVrbIx6wGGV1e5iqGIvMAVDnLJxu08OF-Pb0V4Y/edit#slide=id.ga2146f52c9_0_123
 bool RRTPlanner::GetGlobalPlan(const Vector2f& odom_loc, const float odom_angle) {
-  const size_t MAX_N_ITER = 100;
-
+  const size_t MAX_N_ITER = 200;
+  size_t effective_n_iter = 0;
   State start_state(odom_loc, odom_angle);
   State goal_state(global_goal_mloc_, global_goal_mangle_);
   vector<shared_ptr<TreeNode>> tree_nodes; // TODO redundant, replace me with tree traversal 
@@ -137,8 +138,9 @@ bool RRTPlanner::GetGlobalPlan(const Vector2f& odom_loc, const float odom_angle)
   goal_node->parent = nullptr; // TODO redundant
   tree_nodes.push_back(new_root_node);
   for (size_t i = 0; i < MAX_N_ITER; ++i) { // TODO FIXME
-    float x_rand = rng_.UniformRandom(-50, 50);
-    float y_rand = rng_.UniformRandom(-50, 50);
+    float x_rand = rng_.UniformRandom(-43, -12);
+    // float y_rand = rng_.UniformRandom(-50, 50);
+    float y_rand = rng_.UniformRandom(0, 35);
     State rand_state(Vector2f(x_rand,y_rand), 0.0);
     if (IsRandStateBad_(start_state, rand_state)) { continue; }
 
@@ -209,11 +211,13 @@ bool RRTPlanner::GetGlobalPlan(const Vector2f& odom_loc, const float odom_angle)
         node->parent->children.insert(node);
       }
     }
+    effective_n_iter += 1;
     radius *= 0.95;
   }
   root_ = new_root_node;
   goal_ = goal_node;
   RetrieveGlobalPlan_();
+  // printTree(*goal_);
   return goal_->parent != nullptr;
 }
   
@@ -410,6 +414,8 @@ bool RRTPlanner::Steer_(const State& start_state,
                         Trajectory& traj) {
   const size_t MAX_ITER = 50; // max_dist_travelled = 50 * 1.0 * 0.5 = 25 m
 
+  traj.state.clear();
+  traj.control.clear();
   traj.time = 0;
   bool found_traj = false;
   State curr_state, next_state_one_step;

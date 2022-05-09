@@ -42,6 +42,12 @@ struct Trajectory {
   Trajectory() {}
   Trajectory(const vector<State>& state, const vector<Control>& control, const float time) 
     : state(state), control(control), time(time) {}
+  friend std::ostream& operator<<(std::ostream& o, const Trajectory& traj) {
+    for (const State& s : traj.state) {
+      o << "-->" << s << endl;
+    }
+    return o;
+  }
 };
 
 struct TreeNode {
