@@ -15,6 +15,8 @@ CONFIG_FLOAT(RRT_STOP_DIST, "RRT_STOP_DIST");
 CONFIG_FLOAT(RRT_W_A, "RRT_W_A");
 CONFIG_FLOAT(RRT_W_C, "RRT_W_C");
 CONFIG_FLOAT(RRT_CLEARANCE, "RRT_CLEARANCE");
+CONFIG_INT(RRT_SEARCH_BUFFER, "RRT_SEARCH_BUFFER");
+CONFIG_FLOAT(RRT_LOCAL_HORIZON, "RRT_LOCAL_HORIZON");
 
 using namespace geometry;
 using geometry::line2f;
@@ -51,11 +53,21 @@ RRTPlanner::RRTPlanner()
   : global_goal_mloc_(0,0),
     global_goal_mangle_(0),
     global_goal_set_(false) {
-
+  this->path_start_idx_ = 0;
+  this->found_gloabal_plan_ = false;
 }
 
 Trajectory RRTPlanner::GetGlobalTraj() {
-  return this->gloabal_plan_;
+  return this->global_plan_;
+}
+
+bool RRTPlanner::isGlobalPlanReady() {
+  if (found_gloabal_plan_) {
+    found_gloabal_plan_ = false;
+    return true;
+  } else {
+    return found_gloabal_plan_;
+  }
 }
 
 void RRTPlanner::SetMap(const string &map_file) {
@@ -104,23 +116,38 @@ bool RRTPlanner::IsRandStateBad_(const State& start_state, const State& rand_sta
 
 bool RRTPlanner::RetrieveGlobalPlan_() {
   if (goal_->parent == nullptr) { return false; }
-  gloabal_plan_.state.clear();
-  gloabal_plan_.control.clear();
+  global_plan_.state.clear();
+  global_plan_.control.clear();
   shared_ptr<TreeNode> curr_node = goal_;
   // size_t niter = 0;
   while (curr_node != root_) {
     assert(curr_node->trajectory.state.size() == curr_node->trajectory.control.size());
     for (int i = curr_node->trajectory.state.size()-1; i >= 0; --i) {
-      gloabal_plan_.state.push_back(curr_node->trajectory.state[i]);
+      global_plan_.state.push_back(curr_node->trajectory.state[i]);
     }
     for (int i = curr_node->trajectory.state.size()-1; i >= 0; --i) {
-      gloabal_plan_.control.push_back(curr_node->trajectory.control[i]);
+      global_plan_.control.push_back(curr_node->trajectory.control[i]);
     }
     curr_node = curr_node->parent;
   }
-  std::reverse(gloabal_plan_.state.begin(),   gloabal_plan_.state.end());
-  std::reverse(gloabal_plan_.control.begin(), gloabal_plan_.control.end());
+  std::reverse(global_plan_.state.begin(),   global_plan_.state.end());
+  std::reverse(global_plan_.control.begin(), global_plan_.control.end());
   return true;
+}
+
+Vector2f RRTPlanner::GetLocalGoal(const Vector2f& robot_mloc, const float robot_mangle) {
+  if (!global_goal_set_) { return robot_mloc; }
+  
+  int n_states = global_plan_.state.size();
+  path_start_idx_ = path_start_idx_ <= CONFIG_RRT_SEARCH_BUFFER ? 0 : path_start_idx_ - CONFIG_RRT_SEARCH_BUFFER;
+  int i = path_start_idx_;
+  while (i < n_states && (global_plan_.state[i].loc-robot_mloc).norm() <  CONFIG_RRT_LOCAL_HORIZON) { ++i; }
+  if (i == path_start_idx_) {
+    while (!GetGlobalPlan(robot_mloc, robot_mangle)) {}
+    found_gloabal_plan_ = true;
+  }
+  path_start_idx_ = i;
+  return global_plan_.state[i].loc;
 }
 
 // implement RRT*: https://docs.google.com/presentation/d/1RcltuVrbIx6wGGV1e5iqGIvMAVDnLJxu08OF-Pb0V4Y/edit#slide=id.ga2146f52c9_0_123

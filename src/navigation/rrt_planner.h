@@ -82,6 +82,7 @@ public:
   void SetGlobalGoal(const Vector2f &loc, const float angle);
   bool RetrieveGlobalPlan_(); // TODO move to private
   bool GetGlobalPlan(const Vector2f& odom_loc, const float odom_angle);
+  bool isGlobalPlanReady();
   Trajectory GetGlobalTraj(); // TODO for debug
   Vector2f GetLocalGoal(const Vector2f& robot_mloc, const float robot_mangle);
   bool AtGoal(const Vector2f& robot_mloc);
@@ -103,7 +104,9 @@ private:
   shared_ptr<TreeNode> root_;
   shared_ptr<TreeNode> goal_;
   util_random::Random rng_;
-  Trajectory gloabal_plan_;
+  Trajectory global_plan_;
+  int path_start_idx_;
+  bool found_gloabal_plan_;
 
   const float t_interval_ = 0.5;
   const float kEpsilon = 1e-4;

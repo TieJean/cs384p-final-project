@@ -3,6 +3,8 @@ RRT_STOP_DIST = 0.7;
 RRT_W_A = 1.0;
 RRT_W_C = 1.0;
 RRT_CLEARANCE = 0.3;
+RRT_SEARCH_BUFFER = 4; -- 2m dist travelled
+RRT_LOCAL_HORIZON = 2.0
 
 -- planner
 CIRCLE_RADIUS = 2.0;
