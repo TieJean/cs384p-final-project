@@ -222,6 +222,7 @@ void RRTPlanner::GetAncesterNodes_(const shared_ptr<TreeNode> goal_node,
 bool RRTPlanner::GetGlobalPlan(const Vector2f& odom_loc, const float odom_angle, VisualizationMsg& global_viz_msg) {
   
 // implement RRT*: https://docs.google.com/presentation/d/1RcltuVrbIx6wGGV1e5iqGIvMAVDnLJxu08OF-Pb0V4Y/edit#slide=id.ga2146f52c9_0_123
+
   const size_t MAX_N_ITER = 25000;
   const size_t EFF_N_ITER = 200;
   size_t effective_n_iter = 0;
@@ -324,8 +325,9 @@ bool RRTPlanner::GetGlobalPlan(const Vector2f& odom_loc, const float odom_angle,
     }
     effective_n_iter += 1;
     radius = std::max(radius * 0.98, 1.0);
-    std::cout<<"# nodes in tree: "<<tree_nodes.size()<<std::endl;
+    std::cout<<"# tree nodes: "<<tree_nodes.size()<<std::endl;
     for (const auto& node : tree_nodes) {
+      
       VisualizeTraj(node->trajectory,global_viz_msg,0x000000);
     }
 
