@@ -92,7 +92,7 @@ public:
   bool AtGoal(const Vector2f& robot_mloc);
   bool AtGoal(const State& state_baselink);
   bool AtGoalState_(const State& state, const State& goal_state);
-  void VisualizeTraj(const Trajectory& traj, VisualizationMsg& global_viz_msg);
+  void VisualizeTraj(const Trajectory& traj, VisualizationMsg& global_viz_msg,uint32_t color);
   void VisualizePath(VisualizationMsg& global_viz_msg);
   Trajectory Steer_(const State& start_state, 
                     const State& goal_state,

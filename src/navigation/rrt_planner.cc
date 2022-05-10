@@ -220,11 +220,125 @@ void RRTPlanner::GetAncesterNodes_(const shared_ptr<TreeNode> goal_node,
 }
 
 bool RRTPlanner::GetGlobalPlan(const Vector2f& odom_loc, const float odom_angle, VisualizationMsg& global_viz_msg) {
-  return false;
+  
+// implement RRT*: https://docs.google.com/presentation/d/1RcltuVrbIx6wGGV1e5iqGIvMAVDnLJxu08OF-Pb0V4Y/edit#slide=id.ga2146f52c9_0_123
+  const size_t MAX_N_ITER = 25000;
+  const size_t EFF_N_ITER = 200;
+  size_t effective_n_iter = 0;
+  bool found_path_to_goal = false;
+  State start_state(odom_loc, angleMod(odom_angle));
+  State goal_state(global_goal_mloc_, 0.0);
+  cout << "start state: " << start_state << endl;
+  cout << "goa   state: " << goal_state << endl;
+  vector<shared_ptr<TreeNode>> tree_nodes; // TODO redundant, replace me with tree traversal 
+  float radius = max(distBtwStates(start_state, goal_state), (float)10.0); // delibrately don't divide by 2
+
+  shared_ptr<TreeNode> new_root_node = make_shared<TreeNode>(start_state, 0.0);
+  shared_ptr<TreeNode> goal_node     = make_shared<TreeNode>(goal_state, std::numeric_limits<float>::max());
+  new_root_node->parent = nullptr;  // TODO redundant
+  goal_node->parent = nullptr; // TODO redundant
+  tree_nodes.push_back(new_root_node);
+  // for (size_t i = 0; i < MAX_N_ITER || effective_n_iter > EFF_N_ITER; ++i) { // TODO FIXME
+  for (size_t i = 0; i < MAX_N_ITER; ++i) { // TODO FIXME
+    if (effective_n_iter > EFF_N_ITER) { break; }
+  cout << "i: " << i << ", effective_n_iter: " << effective_n_iter << endl;
+    float x_rand = rng_.UniformRandom(-35, -12);
+    float y_rand = rng_.UniformRandom(0, 20);
+    State rand_state(Vector2f(x_rand,y_rand), 0.0);
+    if (IsRandStateBad_(start_state, rand_state)) { continue; }
+    // if (!IsStateCollisionFree_(rand_state)) { continue; } // TODO add me back
+
+    shared_ptr<TreeNode> rand_node = make_shared<TreeNode>();
+    rand_node->state = rand_state;
+    shared_ptr<TreeNode> nearest_node = make_shared<TreeNode>();
+    float min_dist_to_rand_node = std::numeric_limits<float>::max();
+    // find nearest node in set 
+    vector<shared_ptr<TreeNode>> nodes_around_rand;
+    for (const auto& node : tree_nodes) {
+      float dist_to_rand_node = distBtwTreeNodes(*node, *rand_node);
+      if (dist_to_rand_node < 0.25) {continue;} // tread them as the same node
+      if (dist_to_rand_node <= radius) {
+        nodes_around_rand.push_back(node);
+        if (dist_to_rand_node < min_dist_to_rand_node) {
+          min_dist_to_rand_node = dist_to_rand_node;
+          nearest_node = node;
+        }
+      }
+    }
+    // found nothing
+    if (min_dist_to_rand_node > radius) { continue; }
+    // cout << "nearest_node: " << *nearest_node << endl;
+    // cout << "rand_node: " << *rand_node << endl;
+
+    shared_ptr<TreeNode> new_node = make_shared<TreeNode>();
+    new_node->cost = std::numeric_limits<float>::max(); // TODO redundant
+    State new_state_nearest_node, new_state;
+    Trajectory traj_to_new_state;
+    float cost_to_new_state;
+    shared_ptr<TreeNode> candidate_parent;
+
+    // find pink node (nearest_node) and green node (new_state_nearest_node)
+    if (!SteerToRandNode_(nearest_node->state, rand_node->state, new_state_nearest_node, traj_to_new_state)) { continue; }
+    new_node->state = new_state_nearest_node;
+    cost_to_new_state = nearest_node->cost + GetTrajCost_(traj_to_new_state);
+    new_node->cost = cost_to_new_state < new_node->cost ? cost_to_new_state : new_node->cost;
+    new_node->trajectory = traj_to_new_state;
+    candidate_parent = nearest_node;
+
+    // steer from all blue nodes (nodes_around_rand \ nearest_node) to the green nodes (new_state_nearest_node)
+    for (const auto& node : nodes_around_rand) {
+      if (node == nearest_node) { continue; }
+      if (!Steer_(node->state, new_state_nearest_node, new_state, traj_to_new_state)) { continue; }
+      cost_to_new_state = node->cost + GetTrajCost_(traj_to_new_state);
+      if (cost_to_new_state < new_node->cost) {
+        new_node->cost = cost_to_new_state;
+        new_node->trajectory = traj_to_new_state;
+        new_node->state = new_state;
+        candidate_parent = node;
+      }
+    }
+    // add new node to its parent's children
+    new_node->parent = candidate_parent;
+    new_node->parent->children.insert(new_node);
+    tree_nodes.push_back(new_node); // TODO redundant
+    // printTree(*new_node);
+
+    // add goal state to the set
+    if (distBtwTreeNodes(*new_node, *goal_node) < radius) {
+      nodes_around_rand.push_back(goal_node);
+    }
+    for (const auto& node : nodes_around_rand) {
+      if (node == new_node->parent) { continue; }
+      if (!Steer_(new_node->state, node->state, new_state, traj_to_new_state)) { continue; }
+      if (node == goal_node) { found_path_to_goal = true; }
+      cost_to_new_state = new_node->cost + GetTrajCost_(traj_to_new_state);
+      if (cost_to_new_state < node->cost) {
+        node->cost = cost_to_new_state;
+        node->trajectory = traj_to_new_state;
+        if (node->parent != nullptr) {
+          node->parent->children.erase(node);
+        }
+        node->parent = new_node;
+        node->parent->children.insert(node);
+      }
+    }
+    effective_n_iter += 1;
+    radius = std::max(radius * 0.98, 1.0);
+    for (const auto& node : tree_nodes) {
+      VisualizeTraj(node->trajectory,global_viz_msg,0x000000);
+    }
+
+  }
+  root_ = new_root_node;
+  goal_ = goal_node;
+  RetrieveGlobalPlan_();
+  cout << "effective_n_iter: " << effective_n_iter << ", final radius: " << radius << endl;
+  // printTree(*goal_);
+  return found_path_to_goal;
 }
 
 // implement RRT*: https://docs.google.com/presentation/d/1RcltuVrbIx6wGGV1e5iqGIvMAVDnLJxu08OF-Pb0V4Y/edit#slide=id.ga2146f52c9_0_123
-bool RRTPlanner::GetGlobalPlan(const Vector2f& odom_loc, const float odom_angle) {
+  bool RRTPlanner::GetGlobalPlan(const Vector2f& odom_loc, const float odom_angle) {
   const size_t MAX_N_ITER = 25000;
   const size_t EFF_N_ITER = 200;
   size_t effective_n_iter = 0;
@@ -566,14 +680,14 @@ void RRTPlanner::VisualizePath(VisualizationMsg& global_viz_msg) {
 
 }
 
-void RRTPlanner::VisualizeTraj(const Trajectory& traj, VisualizationMsg& global_viz_msg) {
+void RRTPlanner::VisualizeTraj(const Trajectory& traj, VisualizationMsg& global_viz_msg,uint32_t color) {
   if (traj.state.size() < 4) {return;}
   for (size_t t = 0; t < traj.state.size()-4; ++t) { // TODO FIXME
     if (abs(traj.control[t].c) < kEpsilon) {
       float dist_traveled = GetTravelledDistOneStep_();
       Vector2f baselink_end_in_world;
       pointInBaselinkToWolrd(traj.state[t], Vector2f(dist_traveled, 0), baselink_end_in_world);
-      visualization::DrawLine(traj.state[t].loc, baselink_end_in_world, 0x000000, global_viz_msg);
+      visualization::DrawLine(traj.state[t].loc, baselink_end_in_world, color, global_viz_msg);
     } else {
       auto arc = GetTravelledArc_(traj.state[t], traj.control[t].c);
       Vector2f center   = std::get<0>(arc);
@@ -583,9 +697,10 @@ void RRTPlanner::VisualizeTraj(const Trajectory& traj, VisualizationMsg& global_
       // visualization::DrawCross(center, 0.3, 0xFF0000, global_viz_msg);
       // visualization::DrawCross(traj.state[t].loc, 0.3, 0xFF0000, global_viz_msg);
       // cout << "center: " << center.transpose() << ", radius: " << radius << ", start_angle: " << start_angle << ", end_angle: " << end_angle << endl;
-      visualization::DrawArc(center, radius, start_angle, end_angle, 0x000000, global_viz_msg);
+      visualization::DrawArc(center, radius, start_angle, end_angle, color, global_viz_msg);
     }
   }
 }
 
 }
+//0x000000
