@@ -28,7 +28,7 @@ SET(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 SET(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 
 SET(libs roslib roscpp rosbag glog gflags amrl-shared-lib boost_system lua5.1
-    pthread ${PROJECT_SOURCE_DIR}/third-party/KDTree/build/lib/libKDTree.so)
+    pthread)
 
 ADD_LIBRARY(shared_library
             src/visualization/visualization.cc
