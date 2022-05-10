@@ -415,7 +415,7 @@ namespace navigation
     // visualization::DrawCross(Vector2f(-22, 8), 0.3, 0xFF0000, global_viz_msg_);
     rrt_planner.SetMap("maps/GDC1.txt");
     // cout << "after SetMap" << endl;
-    rrt_planner.SetGlobalGoal(Vector2f(-26, 12), 0.0);
+    rrt_planner.SetGlobalGoal(Vector2f(-14, 16), 0.0);
     // cout << "after SetGlobalGoal" << endl;
     if (rrt_planner.GetGlobalPlan(Vector2f(-32, 20), M_PI,global_viz_msg_)) {
       cout << "get GetGlobalPlan" << endl;
