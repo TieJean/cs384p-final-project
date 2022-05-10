@@ -241,7 +241,7 @@ bool RRTPlanner::GetGlobalPlan(const Vector2f& odom_loc, const float odom_angle,
   // for (size_t i = 0; i < MAX_N_ITER || effective_n_iter > EFF_N_ITER; ++i) { // TODO FIXME
   for (size_t i = 0; i < MAX_N_ITER; ++i) { // TODO FIXME
     if (effective_n_iter > EFF_N_ITER) { break; }
-  cout << "i: " << i << ", effective_n_iter: " << effective_n_iter << endl;
+  // cout << "i: " << i << ", effective_n_iter: " << effective_n_iter << endl;
     float x_rand = rng_.UniformRandom(-35, -12);
     float y_rand = rng_.UniformRandom(0, 20);
     State rand_state(Vector2f(x_rand,y_rand), 0.0);
@@ -324,6 +324,7 @@ bool RRTPlanner::GetGlobalPlan(const Vector2f& odom_loc, const float odom_angle,
     }
     effective_n_iter += 1;
     radius = std::max(radius * 0.98, 1.0);
+    std::cout<<"# nodes in tree: "<<tree_nodes.size()<<std::endl;
     for (const auto& node : tree_nodes) {
       VisualizeTraj(node->trajectory,global_viz_msg,0x000000);
     }
