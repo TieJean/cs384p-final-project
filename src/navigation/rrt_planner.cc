@@ -285,7 +285,7 @@ bool RRTPlanner::GetGlobalPlan(const Vector2f& odom_loc, const float odom_angle,
     new_node->cost = cost_to_new_state < new_node->cost ? cost_to_new_state : new_node->cost;
     new_node->trajectory = traj_to_new_state;
     candidate_parent = nearest_node;
-    DrawPoint(rand_node.state.loc,0xFF0000, global_viz_msg)
+    visualization::DrawPoint(rand_node->state.loc,0xFF0000, global_viz_msg);
     // steer from all blue nodes (nodes_around_rand \ nearest_node) to the green nodes (new_state_nearest_node)
     for (const auto& node : nodes_around_rand) {
       if (node == nearest_node) { continue; }
