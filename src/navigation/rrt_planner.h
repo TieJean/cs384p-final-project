@@ -5,7 +5,6 @@
 #include "eigen3/Eigen/Geometry"
 #include "vector_map/vector_map.h"
 #include "amrl_msgs/VisualizationMsg.h"
-#include "KDTree/KDTree.hpp"
 #include "util/random.h"
 #include <memory>
 #include <vector>
