@@ -334,7 +334,7 @@ bool RRTPlanner::GetGlobalPlan(const Vector2f& odom_loc, const float odom_angle,
   }
   for (const auto& node : tree_nodes) {
     std::cout<<"node loc:" << node->state.loc<<std::endl;
-    visualization::DrawParticle(node->state.loc,0,0xFF0000, global_viz_msg);
+    visualization::DrawPoint(node->state.loc,0xFF0000, global_viz_msg);
   }
   root_ = new_root_node;
   goal_ = goal_node;
