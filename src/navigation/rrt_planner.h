@@ -85,6 +85,7 @@ public:
   Vector2f GetGlobalGoal();
   bool RetrieveGlobalPlan_(); // TODO move to private
   bool GetGlobalPlan(const Vector2f& odom_loc, const float odom_angle);
+  bool GetGlobalPlan(const Vector2f& odom_loc, const float odom_angle, VisualizationMsg& global_viz_msg);
   bool isGlobalPlanReady();
   Trajectory GetGlobalTraj(); // TODO for debug
   Vector2f GetLocalGoal(const Vector2f& robot_mloc, const float robot_mangle);
@@ -140,6 +141,8 @@ private:
                         State& next_state, Trajectory& traj);
   State GetNextStateByCurvature_(const State& curr_state, const float curvature);
   tuple<Vector2f, float, float, float, int> GetTravelledArc_(const State& baselink_state, const float curvature);
+  void GetAncesterNodes_(const shared_ptr<TreeNode> goal_node, 
+                         vector<shared_ptr<TreeNode>>& nodes);
   float GetTravelledDistOneStep_();
   float GetTrajCost_(const Trajectory& traj);
   float GetCostOneStep_(const Control& u);
