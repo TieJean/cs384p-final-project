@@ -417,12 +417,12 @@ namespace navigation
     // cout << "after SetMap" << endl;
     rrt_planner.SetGlobalGoal(Vector2f(-22, 8), 0.0);
     // cout << "after SetGlobalGoal" << endl;
-    if (rrt_planner.GetGlobalPlan(Vector2f(-32, 20), M_PI),global_viz_msg_) {
+    if (rrt_planner.GetGlobalPlan(Vector2f(-32, 20), M_PI,global_viz_msg_)) {
       cout << "get GetGlobalPlan" << endl;
       rrt_planner.PrintFinalPath();
     } else {
       cout << "GetGlobalPlan not found" << endl;
-    // }
+    }
     // rrt_planner.VisualizeTraj(rrt_planner.GetGlobalTraj(), global_viz_msg_);
     // cout << "after VisualizeTraj" << endl;
 
