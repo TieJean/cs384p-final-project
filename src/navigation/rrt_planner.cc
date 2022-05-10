@@ -334,11 +334,11 @@ bool RRTPlanner::GetGlobalPlan(const Vector2f& odom_loc, const float odom_angle,
   }
   for (const auto& node : tree_nodes) {
     std::cout<<"node loc:" << node->state.loc<<std::endl;
-    if (node->parent !=nullptr){
+    // if (node->parent !=nullptr){
       
-      
-      visualization::DrawLine(node->parent->state.loc,node->state.loc,0xFF0000, global_viz_msg);
-    }
+      VisualizeTraj(node->trajectory,global_viz_msg,0x000000);
+      // visualization::DrawLine(node->parent->state.loc,node->state.loc,0xFF0000, global_viz_msg);
+    // }
     
     
   }
