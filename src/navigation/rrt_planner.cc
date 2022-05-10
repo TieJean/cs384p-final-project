@@ -223,7 +223,7 @@ bool RRTPlanner::GetGlobalPlan(const Vector2f& odom_loc, const float odom_angle,
   
 // implement RRT*: https://docs.google.com/presentation/d/1RcltuVrbIx6wGGV1e5iqGIvMAVDnLJxu08OF-Pb0V4Y/edit#slide=id.ga2146f52c9_0_123
 
-  const size_t MAX_N_ITER = 25000;
+  const size_t MAX_N_ITER = 100000;
   const size_t EFF_N_ITER = 200;
   size_t effective_n_iter = 0;
   bool found_path_to_goal = false;
