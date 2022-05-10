@@ -242,7 +242,7 @@ bool RRTPlanner::GetGlobalPlan(const Vector2f& odom_loc, const float odom_angle,
   // for (size_t i = 0; i < MAX_N_ITER || effective_n_iter > EFF_N_ITER; ++i) { // TODO FIXME
   for (size_t i = 0; i < MAX_N_ITER; ++i) { // TODO FIXME
       for (const auto& node : tree_nodes) {
-        visualization::DrawPoint(node->state.loc,0xFF0000, global_viz_msg);
+        visualization::DrawCross(node->state.loc,1,0xFF0000, global_viz_msg);
     }
     if (effective_n_iter > EFF_N_ITER) { break; }
   // cout << "i: " << i << ", effective_n_iter: " << effective_n_iter << endl;
