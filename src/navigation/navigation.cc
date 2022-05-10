@@ -339,7 +339,7 @@ namespace navigation
 
   struct PathOption Navigation::getBestPathOption() {
     // Vector2f local_goal_loc = planner.GetLocalGoal(robot_loc_, robot_angle_);
-    Vector2f local_goal_loc = rrt_planner.GetLocalGoal(robot_loc_, robot_angle_);
+    Vector2f local_goal_loc = rrt_planner.GetLocalGoal(robot_loc_, robot_angle_,global_viz_msg_);
     visualization::DrawCross(local_goal_loc, 0.3, 0x008000, global_viz_msg_);
     visualization::DrawArc(Vector2f(0,0), CONFIG_MAX_LOCAL_GOAL_DIST, 0, M_PI * 2, 0xe608ff, local_viz_msg_);
     
