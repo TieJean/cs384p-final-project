@@ -327,7 +327,7 @@ bool RRTPlanner::GetGlobalPlan(const Vector2f& odom_loc, const float odom_angle,
     radius = std::max(radius * 0.98, 1.0);
     std::cout<<"# tree nodes: "<<tree_nodes.size()<<std::endl;
     for (const auto& node : tree_nodes) {
-      
+      std::cout<<"traj size"<node->trajectory.size()<<std::endl;
       VisualizeTraj(node->trajectory,global_viz_msg,0x000000);
     }
 
