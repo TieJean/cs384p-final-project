@@ -106,7 +106,7 @@ namespace navigation
     // planner.SetGlobalGoal(loc, angle);
     // planner.GetGlobalPlan(robot_loc_, robot_angle_);
     rrt_planner.SetGlobalGoal(loc, angle);
-    while (!rrt_planner.GetGlobalPlan(robot_loc_, robot_angle_)) {}
+    while (!rrt_planner.GetGlobalPlan(robot_loc_, robot_angle_,global_viz_msg_)) {}
     cout << "found global plan" << endl;
   }
 
