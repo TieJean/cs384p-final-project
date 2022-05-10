@@ -241,10 +241,6 @@ bool RRTPlanner::GetGlobalPlan(const Vector2f& odom_loc, const float odom_angle,
   tree_nodes.push_back(new_root_node);
   // for (size_t i = 0; i < MAX_N_ITER || effective_n_iter > EFF_N_ITER; ++i) { // TODO FIXME
   for (size_t i = 0; i < MAX_N_ITER; ++i) { // TODO FIXME
-      for (const auto& node : tree_nodes) {
-        std::cout<<"node loc:" << node->state.loc<<std::endl;
-        visualization::DrawCross(node->state.loc,1,0xFF0000, global_viz_msg);
-    }
     if (effective_n_iter > EFF_N_ITER) { break; }
   // cout << "i: " << i << ", effective_n_iter: " << effective_n_iter << endl;
     float x_rand = rng_.UniformRandom(-35, -12);
@@ -335,6 +331,10 @@ bool RRTPlanner::GetGlobalPlan(const Vector2f& odom_loc, const float odom_angle,
       // VisualizeTraj(node->trajectory,global_viz_msg,0x000000);
     // }
 
+  }
+  for (const auto& node : tree_nodes) {
+    std::cout<<"node loc:" << node->state.loc<<std::endl;
+    visualization::DrawPoint(node->state.loc,0xFF0000, global_viz_msg);
   }
   root_ = new_root_node;
   goal_ = goal_node;
