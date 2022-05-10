@@ -423,7 +423,7 @@ namespace navigation
     } else {
       cout << "GetGlobalPlan not found" << endl;
     }
-    rrt_planner.VisualizeTraj(rrt_planner.GetGlobalTraj(), global_viz_msg_);
+    rrt_planner.VisualizeTraj(rrt_planner.GetGlobalTraj(), global_viz_msg_,0x000000);
     // cout << "after VisualizeTraj" << endl;
 
     // If odometry has not been initialized, we can't do anything.
